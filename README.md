@@ -18,7 +18,6 @@ Epochs: 5
 
 <p align="center">
   <img src="images/acc_impv.png" width="45%" alt="Model Accuracy"/>
-  &nbsp;&nbsp;&nbsp;
   <img src="images/losss_impv.png" width="45%" alt="Model Loss"/>
 </p>
 Validation accuracy stayed consistently high (~96%) throughout training while training accuracy steadily caught up — showing good generalization with minimal overfitting.
