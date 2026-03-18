@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LeafScan — Plant Disease Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --soil: #1a1209;
+    --bark: #2d1f0e;
+    --moss: #2a4a1e;
+    --leaf: #3d7a2f;
+    --sprout: #5cb048;
+    --dew: #a8e08a;
+    --petal: #f0f7ec;
+    --sun: #e8c84a;
+    --blight: #c0392b;
+    --blight-soft: #f8d7d4;
+    --cream: #fdf8f2;
+    --ink: #1a1209;
+  }
+
+  html, body {
+    height: 100%;
+    background-color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    overflow-x: hidden;
+  }
+
+  /* ── Background texture ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 10% 20%, rgba(61,122,47,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 90% 80%, rgba(90,176,72,0.06) 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233d7a2f' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  /* ── Layout ── */
+  .page { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ── Header ── */
+  header {
+    padding: 28px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(61,122,47,0.12);
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: var(--leaf);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem; font-weight: 700;
+    color: var(--moss);
+    letter-spacing: -0.5px;
+  }
+  .logo-text span { color: var(--sprout); }
+  .tagline {
+    font-size: 0.8rem; color: #888; font-weight: 300; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    text-align: center;
+    padding: 64px 24px 48px;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    font-weight: 900;
+    line-height: 1.1;
+    color: var(--soil);
+    margin-bottom: 16px;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--leaf);
+  }
+  .hero p {
+    font-size: 1.05rem; color: #666; font-weight: 300;
+    max-width: 520px; margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* ── Main card ── */
+  .main-card {
+    background: #fff;
+    border: 1px solid rgba(61,122,47,0.14);
+    border-radius: 24px;
+    box-shadow: 0 4px 40px rgba(45,31,14,0.07), 0 1px 3px rgba(0,0,0,0.04);
+    max-width: 780px;
+    width: calc(100% - 48px);
+    margin: 0 auto 64px;
+    overflow: hidden;
+  }
+
+  /* ── Drop zone ── */
+  .drop-zone {
+    padding: 56px 48px;
+    border-bottom: 1px solid rgba(61,122,47,0.1);
+    display: flex; flex-direction: column; align-items: center;
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    background: rgba(92,176,72,0.04);
+  }
+  .drop-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .drop-icon {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, var(--moss), var(--leaf));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(61,122,47,0.25);
+    transition: transform 0.3s;
+  }
+  .drop-zone:hover .drop-icon { transform: scale(1.07) rotate(-3deg); }
+
+  .drop-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem; font-weight: 700;
+    color: var(--soil); margin-bottom: 8px;
+  }
+  .drop-sub { font-size: 0.9rem; color: #999; }
+  .drop-sub strong { color: var(--leaf); }
+
+  .browse-btn {
+    margin-top: 24px;
+    background: var(--leaf);
+    color: #fff;
+    border: none; border-radius: 100px;
+    padding: 12px 32px;
+    font-size: 0.9rem; font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 14px rgba(61,122,47,0.3);
+    position: relative; z-index: 2;
+    pointer-events: none; /* let file input capture clicks */
+  }
+  .drop-zone:hover .browse-btn {
+    background: var(--moss);
+    box-shadow: 0 6px 18px rgba(61,122,47,0.4);
+  }
+
+  /* ── Preview ── */
+  #preview-section {
+    display: none;
+    padding: 32px 48px;
+    border-bottom: 1px solid rgba(61,122,47,0.1);
+    align-items: center; gap: 32px;
+    flex-wrap: wrap;
+  }
+  #preview-section.visible { display: flex; }
+
+  #preview-img {
+    width: 160px; height: 160px;
+    object-fit: cover;
+    border-radius: 16px;
+    border: 2px solid rgba(61,122,47,0.15);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  .preview-info { flex: 1; min-width: 180px; }
+  .preview-filename { font-weight: 500; font-size: 0.95rem; margin-bottom: 6px; word-break: break-all; }
+  .preview-size { font-size: 0.82rem; color: #999; margin-bottom: 20px; }
+
+  .analyze-btn {
+    background: linear-gradient(135deg, var(--moss), var(--leaf));
+    color: #fff;
+    border: none; border-radius: 100px;
+    padding: 14px 40px;
+    font-size: 1rem; font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 6px 20px rgba(61,122,47,0.35);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .analyze-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(61,122,47,0.4); }
+  .analyze-btn:active { transform: translateY(0); }
+  .analyze-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .analyze-btn.loading .spinner { display: block; }
+  .analyze-btn.loading .btn-text { opacity: 0.7; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Results ── */
+  #result-section {
+    display: none;
+    padding: 40px 48px;
+    animation: fadeUp 0.5s ease;
+  }
+  #result-section.visible { display: block; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-header {
+    display: flex; align-items: flex-start; gap: 20px;
+    margin-bottom: 32px;
+  }
+  .result-badge {
+    width: 56px; height: 56px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; flex-shrink: 0;
+  }
+  .result-badge.healthy { background: rgba(92,176,72,0.12); }
+  .result-badge.diseased { background: rgba(192,57,43,0.1); }
+
+  .result-plant {
+    font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--leaf); font-weight: 500; margin-bottom: 4px;
+  }
+  .result-disease {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem; font-weight: 700;
+    color: var(--soil); line-height: 1.15;
+    margin-bottom: 6px;
+  }
+  .result-status {
+    font-size: 0.88rem; font-weight: 400;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 100px;
+  }
+  .result-status.healthy { background: rgba(92,176,72,0.12); color: var(--moss); }
+  .result-status.diseased { background: var(--blight-soft); color: var(--blight); }
+
+  /* ── Confidence bar ── */
+  .confidence-block { margin-bottom: 32px; }
+  .conf-label { font-size: 0.82rem; color: #999; margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .conf-label strong { color: var(--soil); font-size: 1rem; }
+  .conf-track {
+    height: 10px; background: #f0f0f0; border-radius: 100px; overflow: hidden;
+  }
+  .conf-fill {
+    height: 100%; border-radius: 100px;
+    background: linear-gradient(90deg, var(--sprout), var(--leaf));
+    width: 0; transition: width 1s cubic-bezier(.22,1,.36,1);
+  }
+  .conf-fill.diseased { background: linear-gradient(90deg, #e67e22, var(--blight)); }
+
+  /* ── Top 3 ── */
+  .top3-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: #bbb; margin-bottom: 14px; }
+  .top3-list { display: flex; flex-direction: column; gap: 10px; }
+  .top3-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 16px; border-radius: 12px;
+    background: var(--petal); border: 1px solid rgba(61,122,47,0.08);
+    transition: background 0.2s;
+  }
+  .top3-item:first-child { background: rgba(92,176,72,0.07); border-color: rgba(61,122,47,0.18); }
+  .top3-rank { font-size: 0.75rem; font-weight: 500; color: #bbb; width: 18px; text-align: center; }
+  .top3-item:first-child .top3-rank { color: var(--leaf); }
+  .top3-name { flex: 1; font-size: 0.9rem; }
+  .top3-plant-label { font-size: 0.72rem; color: #aaa; }
+  .top3-conf { font-size: 0.88rem; font-weight: 500; color: var(--moss); }
+  .top3-bar-wrap { width: 80px; height: 4px; background: #e8e8e8; border-radius: 100px; overflow: hidden; }
+  .top3-bar { height: 100%; border-radius: 100px; background: var(--sprout); transition: width 0.9s ease; }
+
+  /* ── Reset btn ── */
+  .reset-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 32px;
+    font-size: 0.85rem; color: #aaa;
+    cursor: pointer; border: none; background: none;
+    font-family: 'DM Sans', sans-serif;
+    transition: color 0.2s;
+    text-decoration: none;
+  }
+  .reset-link:hover { color: var(--leaf); }
+
+  /* ── Error ── */
+  .error-box {
+    margin: 24px 48px;
+    background: var(--blight-soft);
+    border: 1px solid rgba(192,57,43,0.2);
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: var(--blight);
+    font-size: 0.9rem;
+    display: none;
+  }
+  .error-box.visible { display: block; }
+
+  /* ── Footer ── */
+  footer {
+    margin-top: auto; padding: 24px 48px;
+    border-top: 1px solid rgba(61,122,47,0.08);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.78rem; color: #ccc;
+    flex-wrap: wrap; gap: 8px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    header { padding: 20px 24px; }
+    .drop-zone { padding: 40px 24px; }
+    #preview-section { padding: 24px; }
+    #result-section { padding: 28px 24px; }
+    .result-disease { font-size: 1.4rem; }
+    footer { padding: 16px 24px; flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🌿</div>
+      <div>
+        <div class="logo-text">Leaf<span>Scan</span></div>
+        <div class="tagline">AI Plant Disease Detector</div>
+      </div>
+    </div>
+    <div class="tagline" style="text-align:right;">38 diseases · 14 plant species</div>
+  </header>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Diagnose your <em>plant's disease</em><br>in seconds</h1>
+    <p>Upload a clear photo of a leaf and our AI model will identify the disease and give you an instant diagnosis.</p>
+  </div>
+
+  <!-- Main card -->
+  <div class="main-card">
+
+    <!-- Drop zone -->
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*" />
+      <div class="drop-icon">🍃</div>
+      <div class="drop-title">Drop your leaf photo here</div>
+      <div class="drop-sub">PNG, JPG, WEBP supported · <strong>Clear, close-up shots work best</strong></div>
+      <div class="browse-btn">Browse Files</div>
+    </div>
+
+    <!-- Preview -->
+    <div id="preview-section">
+      <img id="preview-img" src="" alt="Preview" />
+      <div class="preview-info">
+        <div class="preview-filename" id="preview-name">—</div>
+        <div class="preview-size" id="preview-size">—</div>
+        <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
+          <div class="spinner"></div>
+          <span class="btn-text">🔍 Analyze Leaf</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-box" id="errorBox"></div>
+
+    <!-- Results -->
+    <div id="result-section">
+      <div class="result-header">
+        <div class="result-badge" id="resultBadge">🌿</div>
+        <div>
+          <div class="result-plant" id="resultPlant"></div>
+          <div class="result-disease" id="resultDisease"></div>
+          <div class="result-status" id="resultStatus"></div>
+        </div>
+      </div>
+
+      <div class="confidence-block">
+        <div class="conf-label">
+          <span>Confidence Score</span>
+          <strong id="confValue">—</strong>
+        </div>
+        <div class="conf-track">
+          <div class="conf-fill" id="confFill"></div>
+        </div>
+      </div>
+
+      <div class="top3-label">Top Predictions</div>
+      <div class="top3-list" id="top3List"></div>
+
+      <button class="reset-link" onclick="reset()">← Scan another leaf</button>
+    </div>
+
+  </div><!-- /main-card -->
+
+  <footer>
+    <span>LeafScan · Powered by your trained TensorFlow model</span>
+    <span>For educational and research use only</span>
+  </footer>
+
+</div><!-- /page -->
+
+<script>
+  const API = "http://localhost:5000/predict";
+  let selectedFile = null;
+
+  // Drag and drop
+  const dropZone = document.getElementById("dropZone");
+  dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("dragover"); });
+  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault(); dropZone.classList.remove("dragover");
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  document.getElementById("fileInput").addEventListener("change", e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  function handleFile(file) {
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById("preview-img").src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    document.getElementById("preview-name").textContent = file.name;
+    document.getElementById("preview-size").textContent = (file.size / 1024).toFixed(1) + " KB";
+    document.getElementById("preview-section").classList.add("visible");
+    document.getElementById("result-section").classList.remove("visible");
+    hideError();
+  }
+
+  async function analyze() {
+    if (!selectedFile) return;
+    const btn = document.getElementById("analyzeBtn");
+    btn.disabled = true; btn.classList.add("loading");
+    btn.querySelector(".btn-text").textContent = "Analyzing…";
+    hideError();
+
+    const form = new FormData();
+    form.append("file", selectedFile);
+
+    try {
+      const res = await fetch(API, { method: "POST", body: form });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      showResult(data);
+    } catch (err) {
+      showError("Could not connect to the local server. Make sure app.py is running on port 5000.<br><small>" + err.message + "</small>");
+    } finally {
+      btn.disabled = false; btn.classList.remove("loading");
+      btn.querySelector(".btn-text").textContent = "🔍 Analyze Leaf";
+    }
+  }
+
+  function showResult(d) {
+    const rs = document.getElementById("result-section");
+
+    document.getElementById("resultPlant").textContent = d.plant;
+    document.getElementById("resultDisease").textContent = d.disease;
+
+    const badge = document.getElementById("resultBadge");
+    const status = document.getElementById("resultStatus");
+    if (d.is_healthy) {
+      badge.textContent = "✅"; badge.className = "result-badge healthy";
+      status.textContent = "✓ Plant appears healthy";
+      status.className = "result-status healthy";
+    } else {
+      badge.textContent = "⚠️"; badge.className = "result-badge diseased";
+      status.textContent = "⚠ Disease detected";
+      status.className = "result-status diseased";
+    }
+
+    document.getElementById("confValue").textContent = d.confidence + "%";
+    const fill = document.getElementById("confFill");
+    fill.className = "conf-fill" + (d.is_healthy ? "" : " diseased");
+    setTimeout(() => { fill.style.width = d.confidence + "%"; }, 50);
+
+    // Top 3
+    const list = document.getElementById("top3List");
+    list.innerHTML = "";
+    d.top3.forEach((item, i) => {
+      const div = document.createElement("div");
+      div.className = "top3-item";
+      div.innerHTML = `
+        <div class="top3-rank">#${i+1}</div>
+        <div class="top3-name">
+          <div>${item.disease}</div>
+          <div class="top3-plant-label">${item.plant}</div>
+        </div>
+        <div class="top3-bar-wrap"><div class="top3-bar" style="width:0%" data-w="${item.confidence}"></div></div>
+        <div class="top3-conf">${item.confidence}%</div>
+      `;
+      list.appendChild(div);
+    });
+    setTimeout(() => {
+      list.querySelectorAll(".top3-bar").forEach(b => { b.style.width = b.dataset.w + "%"; });
+    }, 100);
+
+    rs.classList.add("visible");
+    rs.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function showError(msg) {
+    const box = document.getElementById("errorBox");
+    box.innerHTML = "❌ " + msg;
+    box.classList.add("visible");
+  }
+  function hideError() { document.getElementById("errorBox").classList.remove("visible"); }
+
+  function reset() {
+    selectedFile = null;
+    document.getElementById("fileInput").value = "";
+    document.getElementById("preview-section").classList.remove("visible");
+    document.getElementById("result-section").classList.remove("visible");
+    hideError();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+</script>
+</body>
+</html>
