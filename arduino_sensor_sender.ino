@@ -4,7 +4,7 @@
 
 #define DHTPIN 13
 #define DHTTYPE DHT11
-#define SOIL_PIN 14
+#define SOIL_PIN 33
 
 const char* ssid = "YOUR_WIFI_NAME";
 const char* password = "YOUR_WIFI_PASSWORD";
