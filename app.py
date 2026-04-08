@@ -1,11 +1,9 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+import io
 import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
-import io
-import base64
-import os
 
 app = Flask(__name__, static_folder=".")
 CORS(app)
@@ -35,16 +33,133 @@ class_names = [
     "Tomato___healthy"
 ]
 
+sensor_state = {
+    "soil_moisture": 42,
+    "temperature": 29.0,
+    "humidity": 61.0,
+    "soil_status": "Moist",
+    "climate_status": "Fair",
+    "irrigation_level": "Monitor",
+    "irrigation_advice": "Soil moisture is acceptable. Keep monitoring before the next watering cycle."
+}
+
+
 def parse_class_name(raw):
-    """Parse 'Plant___Disease' into readable plant + disease."""
     parts = raw.split("___")
     plant = parts[0].replace("_", " ").replace("(", "").replace(")", "").strip()
     disease = parts[1].replace("_", " ").strip() if len(parts) > 1 else "Unknown"
     return plant, disease
 
+
+def classify_soil_moisture(value):
+    if value < 30:
+        return "Dry"
+    if value < 70:
+        return "Moist"
+    return "Wet"
+
+
+def classify_climate(temperature, humidity):
+    if temperature > 35 or humidity > 85:
+        return "Stress risk"
+    if temperature < 15 or humidity < 25:
+        return "Low-growth"
+    return "Fair"
+
+
+def build_irrigation_advice(soil_moisture, temperature, humidity):
+    if soil_moisture < 25:
+        return (
+            "Irrigate now",
+            "Soil is very dry. Start irrigation now and recheck moisture after 10 to 15 minutes."
+        )
+    if soil_moisture < 40:
+        if temperature >= 32 or humidity <= 35:
+            return (
+                "Irrigate soon",
+                "Soil is getting dry and the air is harsh. Schedule irrigation soon to avoid plant stress."
+            )
+        return (
+            "Monitor closely",
+            "Soil is slightly dry. Plan a light watering cycle if moisture keeps falling."
+        )
+    if soil_moisture <= 70:
+        return (
+            "Hold irrigation",
+            "Soil moisture is in a healthy range. No irrigation is needed right now."
+        )
+    return (
+        "Stop irrigation",
+        "Soil is already wet. Avoid watering until the moisture level drops."
+    )
+
+
+def build_sensor_payload():
+    soil_moisture = int(sensor_state["soil_moisture"])
+    temperature = round(float(sensor_state["temperature"]), 1)
+    humidity = round(float(sensor_state["humidity"]), 1)
+    soil_status = classify_soil_moisture(soil_moisture)
+    climate_status = classify_climate(temperature, humidity)
+    irrigation_level, irrigation_advice = build_irrigation_advice(
+        soil_moisture,
+        temperature,
+        humidity
+    )
+
+    sensor_state.update({
+        "soil_moisture": soil_moisture,
+        "temperature": temperature,
+        "humidity": humidity,
+        "soil_status": soil_status,
+        "climate_status": climate_status,
+        "irrigation_level": irrigation_level,
+        "irrigation_advice": irrigation_advice
+    })
+    return sensor_state
+
+
 @app.route("/")
 def index():
     return send_from_directory(".", "index.html")
+
+
+@app.route("/sensor-data", methods=["GET"])
+def get_sensor_data():
+    return jsonify(build_sensor_payload())
+
+
+@app.route("/sensor-data", methods=["POST"])
+def update_sensor_data():
+    data = request.get_json(silent=True) or {}
+
+    missing_fields = [
+        field for field in ("soil_moisture", "temperature", "humidity")
+        if field not in data
+    ]
+    if missing_fields:
+        return jsonify({"error": f"Missing fields: {', '.join(missing_fields)}"}), 400
+
+    try:
+        soil_moisture = int(float(data["soil_moisture"]))
+        temperature = float(data["temperature"])
+        humidity = float(data["humidity"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "Sensor values must be numeric"}), 400
+
+    if not 0 <= soil_moisture <= 100:
+        return jsonify({"error": "soil_moisture must be between 0 and 100"}), 400
+    if not -20 <= temperature <= 80:
+        return jsonify({"error": "temperature looks out of range"}), 400
+    if not 0 <= humidity <= 100:
+        return jsonify({"error": "humidity must be between 0 and 100"}), 400
+
+    sensor_state.update({
+        "soil_moisture": soil_moisture,
+        "temperature": temperature,
+        "humidity": humidity
+    })
+    return jsonify(build_sensor_payload())
+
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -69,14 +184,13 @@ def predict():
         plant, disease = parse_class_name(raw_name)
         is_healthy = "healthy" in raw_name.lower()
 
-        # Top 3 predictions
         top3_indices = np.argsort(pred[0])[::-1][:3]
         top3 = []
         for i in top3_indices:
-            p, d = parse_class_name(class_names[i])
+            top_plant, top_disease = parse_class_name(class_names[i])
             top3.append({
-                "plant": p,
-                "disease": d,
+                "plant": top_plant,
+                "disease": top_disease,
                 "confidence": round(float(pred[0][i] * 100), 2),
                 "healthy": "healthy" in class_names[i].lower()
             })
@@ -90,9 +204,10 @@ def predict():
             "top3": top3
         })
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
 
 if __name__ == "__main__":
-    print("🌿 Plant Disease Detector running at http://localhost:5000")
+    print("Plant Disease Detector running at http://localhost:5000")
     app.run(debug=True, port=5000)
