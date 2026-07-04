@@ -27,9 +27,12 @@ TestResults.xml
 __pycache__/
 *.pyc
 
+# Stale pre-rename package kept out of the repository if OneDrive refuses deletion
+/src/agriai/
+
 # Dataset
-dataset/
-data/
+/dataset/
+/data/
 
 # Large model files
 *.h5

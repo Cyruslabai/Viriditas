@@ -1,0 +1,1 @@
+"""VIRIDITAS core package."""

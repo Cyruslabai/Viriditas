@@ -1,3 +1,141 @@
+# VIRIDITAS
+
+VIRIDITAS is an AI-powered plant health system designed to identify a plant from a leaf image, diagnose plant-specific diseases, and eventually provide treatment, fertilizer, prevention, weather-aware, and local AI assistant guidance.
+
+The current engineering milestone is a metadata-driven dataset pipeline. Instead of copying images into new folders, VIRIDITAS will index existing Kaggle datasets in place and create standardized CSV metadata for training plant identification and disease classification models.
+
+## Current Status
+
+This repository currently contains an earlier Flask prototype for plant disease prediction and sensor-based irrigation monitoring. The next phase is to refactor the project into a scalable VIRIDITAS pipeline with separate dataset indexing, model training, inference, and recommendation components.
+
+## Target Features
+
+- Plant identification from leaf images
+- Plant-specific disease diagnosis
+- Metadata-based multi-dataset indexing
+- Standardized plant and disease labels across Kaggle datasets
+- Train, validation, and test split generation without image duplication
+- Local inference on consumer devices
+- AI-generated treatment recommendations
+- Fertilizer and prevention guidance
+- Weather-aware farming advice
+- Offline assistant and future voice interaction
+- IoT sensor integration for irrigation context
+
+## Target Architecture
+
+```text
+Leaf Image
+    |
+    v
+Plant Identification Model
+    |
+    v
+Disease Classification Model
+    |
+    v
+AI Recommendation Engine
+    |
+    v
+Treatment | Fertilizer | Prevention | Farming Guidance
+```
+
+## Dataset Strategy
+
+VIRIDITAS uses a metadata-first data engineering approach:
+
+- Keep original Kaggle images in place.
+- Scan dataset folders automatically.
+- Detect dataset layout types, including flat class folders and train/valid/test folders.
+- Extract plant names and disease names from class folder names.
+- Normalize inconsistent labels into canonical labels.
+- Build a master dataset CSV containing image paths and labels.
+- Generate train, validation, and test splits as metadata, not copied image folders.
+
+This avoids duplicate image storage and makes it possible to add new datasets without rewriting training code.
+
+## Planned Repository Structure
+
+```text
+VIRIDITAS/
+|-- app.py                         Existing Flask prototype
+|-- index.html                     Existing web dashboard prototype
+|-- arduino_sensor_sender.ino      Existing ESP32 sensor sender sketch
+|-- requirements.txt               Python dependencies
+|-- data/
+|   |-- raw/                       External datasets, usually not committed
+|   |-- metadata/                  Generated CSV indexes and split files
+|-- notebooks/
+|   |-- 01_dataset_index_builder.ipynb
+|   |-- 01_dataset_index_builder.py
+|   |-- 02_train_plant_model.ipynb
+|   |-- 03_train_disease_model.ipynb
+|   |-- 04_inference.ipynb
+|-- scripts/
+|   |-- build_dataset_index.py       Local/Kaggle metadata builder CLI
+|-- src/
+|   |-- viriditas/
+|       |-- data/                  Dataset scanning, parsing, indexing
+|       |-- models/                Model definitions and training helpers
+|       |-- inference/             Local inference pipeline
+|       |-- recommendations/       Treatment and guidance engine
+|-- tests/                         Automated tests for preprocessing
+|-- PROJECT_PLAN.md                Single source of truth
+|-- CHANGELOG.md                   Chronological project history
+|-- TODO.md                        Engineering task list
+|-- README.md                      Project overview
+```
+
+## Dataset Preprocessing
+
+The dataset index builder is implemented under `src/viriditas/data/`. It scans existing dataset folders and writes metadata files without copying images.
+
+Kaggle notebook entrypoint:
+
+```text
+notebooks/01_dataset_index_builder.ipynb
+```
+
+Script entrypoint:
+
+```bash
+python scripts/build_dataset_index.py \
+  --dataset-root /kaggle/input/datasets/rizwan123456789/potato-disease-leaf-datasetpld \
+  --output-dir /kaggle/working/data/metadata
+```
+
+Pass `--dataset-root` multiple times to combine datasets.
+
+Generated files:
+
+```text
+master_dataset.csv
+plant_id_dataset.csv
+disease_dataset.csv
+train.csv
+val.csv
+test.csv
+label_map_plants.json
+label_map_diseases.json
+dataset_summary.json
+```
+
+Run preprocessing tests locally:
+
+```bash
+python -m unittest discover -s tests
+```
+
+## Next Milestone
+
+Run `01_dataset_index_builder.ipynb` in Kaggle, inspect `dataset_summary.json`, and validate the generated labels before starting model training.
+
+For the detailed engineering plan, see `PROJECT_PLAN.md`.
+
+## Existing Prototype
+
+The original prototype documentation is preserved below.
+
 # Plant Disease Identifier with Sensor-Based Irrigation Monitoring
 
 This project is a smart agriculture web application that combines plant disease detection with real-time environmental monitoring. It allows a user to upload a leaf image for disease prediction while also receiving live soil moisture, temperature, and humidity readings from connected sensors. Based on the sensor values, the system generates simple irrigation recommendations to support better plant care.
@@ -206,8 +344,8 @@ Accepts JSON sensor readings in the format:
 Training graphs used in the project are stored in the `images/` folder.
 
 <p align="center">
-  <img src="images/acc_impv.png" width="45%" alt="Model accuracy graph" />
-  <img src="images/losss_impv.png" width="45%" alt="Model loss graph" />
+  <img src="images/acc%20impv.png" width="45%" alt="Model accuracy graph" />
+  <img src="images/losss%20impv.png" width="45%" alt="Model loss graph" />
 </p>
 
 ## Educational Value
