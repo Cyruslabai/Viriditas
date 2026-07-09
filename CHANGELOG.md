@@ -8,6 +8,7 @@
 - Replaced generic container folder labels such as `Data`, `Original Dataset`, `Pea Plant Dataset`, and `Test Disease Severity Level` with plant hints inferred from dataset names.
 - Collapsed augmentation operation suffixes such as `Brightness Adjusted`, `Gaussian Noise`, and `Rotated` back into the base disease label.
 - Removed repeated plant names from disease labels when they appear as disease suffixes.
+- Cleared cached `viriditas` modules in the Kaggle runner so reruns use freshly downloaded parser code.
 
 ## 2026-07-10
 

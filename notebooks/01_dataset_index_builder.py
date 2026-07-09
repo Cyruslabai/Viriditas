@@ -14,6 +14,12 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if SRC_ROOT.exists() and str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+# Kaggle notebooks keep imported modules alive across cell reruns. Clear the
+# package cache so rerunning this script uses the freshly downloaded code.
+for module_name in list(sys.modules):
+    if module_name == "viriditas" or module_name.startswith("viriditas."):
+        del sys.modules[module_name]
+
 from viriditas.data.index_builder import build_dataset_index
 from viriditas.data.io import write_label_map, write_records_csv, write_split_csvs, write_summary
 from viriditas.data.splits import assign_splits
