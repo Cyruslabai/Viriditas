@@ -35,6 +35,9 @@ Last updated: 2026-07-10
 - [ ] Run Kaggle preprocessing on the selected 13 datasets
 - [ ] Inspect generated `dataset_summary.json`
 - [ ] Review sample rows from `master_dataset.csv`
+- [x] Fix generic container folder labels after Kaggle validation
+- [x] Collapse augmented disease labels into base disease classes
+- [ ] Rerun Kaggle preprocessing after parser fixes
 
 ## Testing
 
@@ -42,6 +45,7 @@ Last updated: 2026-07-10
 - [x] Add tests for layout detection
 - [x] Add tests for split generation
 - [x] Add tests for duplicate detection
+- [x] Add tests for generic folder and augmentation label parsing
 - [ ] Add tests for metadata schema validation
 
 ## Training

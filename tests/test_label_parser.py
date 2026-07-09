@@ -41,6 +41,27 @@ class LabelParserTests(unittest.TestCase):
 
         self.assertEqual(hint, "Potato")
 
+    def test_replaces_generic_container_folder_with_plant_hint(self) -> None:
+        parsed = parse_label("Data___Common_rust", ("Data", "Common_rust"), plant_hint="Corn")
+
+        self.assertEqual(parsed.plant, "Corn")
+        self.assertEqual(parsed.disease, "Common Rust")
+
+    def test_collapses_augmented_disease_suffixes(self) -> None:
+        parsed = parse_label("Peach___Bacterial_spot_Brightness_Adjusted")
+
+        self.assertEqual(parsed.plant, "Peach")
+        self.assertEqual(parsed.disease, "Bacterial Spot")
+
+    def test_removes_repeated_plant_suffix_from_disease(self) -> None:
+        parsed = parse_label(
+            "Orange___Citrus_Nutrient_Deficiency_Yellow_Leaf_Orange",
+            plant_hint="Orange",
+        )
+
+        self.assertEqual(parsed.plant, "Orange")
+        self.assertEqual(parsed.disease, "Citrus Nutrient Deficiency Yellow Leaf")
+
 
 if __name__ == "__main__":
     unittest.main()

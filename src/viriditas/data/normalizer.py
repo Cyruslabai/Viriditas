@@ -9,9 +9,40 @@ PLANT_ALIASES = {
     "pepper bell": "Pepper Bell",
     "pepper": "Pepper Bell",
     "corn maize": "Corn",
+    "data": "Corn",
     "maize": "Corn",
     "cherry including sour": "Cherry",
+    "original dataset": "Pumpkin",
+    "pea plant dataset": "Pea",
+    "test disease severity level": "Strawberry",
 }
+
+GENERIC_PLANT_LABELS = frozenset({
+    "data",
+    "original dataset",
+    "pea plant dataset",
+    "test disease severity level",
+})
+
+AUGMENTATION_SUFFIXES = (
+    "brightness adjusted",
+    "contrast adjusted",
+    "cropped",
+    "flipped horizontal",
+    "flipped vertical",
+    "gaussian noise",
+    "high pass",
+    "hist equalized",
+    "jittered",
+    "laplacian",
+    "poisson noise",
+    "rotated",
+    "salt pepper noise",
+    "saturation adjusted",
+    "sobel",
+    "translated",
+    "unsharp mask",
+)
 
 KNOWN_PLANTS = (
     "apple",
@@ -69,7 +100,7 @@ def canonical_plant(value: str) -> str:
 
 
 def canonical_disease(value: str) -> str:
-    clean = normalize_token(value).lower()
+    clean = strip_augmentation_suffix(normalize_token(value)).lower()
     if clean in {"", "unknown"}:
         return "Unknown"
     if clean in {"healthy", "normal"}:
@@ -97,10 +128,29 @@ def infer_plant_hint(value: str) -> str:
 
 
 def remove_plant_prefix(label: str, plant: str) -> str:
-    """Remove a repeated plant prefix from a disease label when present."""
+    """Remove a repeated plant prefix or suffix from a disease label."""
 
     clean_label = normalize_token(label)
     clean_plant = normalize_token(plant)
     if clean_label.lower().startswith(clean_plant.lower() + " "):
-        return clean_label[len(clean_plant) :].strip()
+        clean_label = clean_label[len(clean_plant) :].strip()
+    if clean_label.lower().endswith(" " + clean_plant.lower()):
+        clean_label = clean_label[: -len(clean_plant)].strip()
     return clean_label
+
+
+def is_generic_plant_label(value: str) -> bool:
+    """Return true for folder names that are containers, not real plant labels."""
+
+    return normalize_token(value).lower() in GENERIC_PLANT_LABELS
+
+
+def strip_augmentation_suffix(value: str) -> str:
+    """Collapse augmented class folders back to the base disease label."""
+
+    clean = normalize_token(value)
+    lowered = clean.lower()
+    for suffix in AUGMENTATION_SUFFIXES:
+        if lowered.endswith(" " + suffix):
+            return clean[: -len(suffix)].strip()
+    return clean

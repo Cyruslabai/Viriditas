@@ -233,6 +233,22 @@ Reason:
 - Easier to expand plant coverage before disease coverage
 - Future multi-task or hierarchical models remain possible
 
+### Decision: Normalize dataset container and augmentation labels
+
+Date: 2026-07-10
+
+Reason:
+
+- Kaggle metadata validation showed plant labels such as `Data`, `Original Dataset`, `Pea Plant Dataset`, and `Test Disease Severity Level`.
+- Augmented datasets created separate labels such as `Peach Bacterial Spot Brightness Adjusted`.
+- These labels would incorrectly increase the number of plant and disease classes.
+
+Action:
+
+- Use dataset-name plant hints when folder labels are generic containers.
+- Strip augmentation operation suffixes from disease labels.
+- Remove repeated plant names from disease labels when they appear as suffixes.
+
 ## Current Progress
 
 Completed:
@@ -247,10 +263,12 @@ Completed:
 - Implemented Kaggle/local dataset index builder entrypoints
 - Added tests for label parsing, layout detection, and split generation
 - Added exact duplicate image detection using SHA-256 hashes
+- Validated Kaggle metadata output for 201,094 images
+- Improved parser rules for generic dataset folders and augmented class folders
 
 In progress:
 
-- Run the Kaggle preprocessing notebook against the selected datasets and inspect generated metadata
+- Rerun Kaggle preprocessing after parser fixes and inspect generated metadata
 
 Not started:
 
@@ -320,14 +338,15 @@ Decision: Use a small Python package under `src/viriditas/` and keep notebooks t
 
 ## Next Tasks
 
-1. Run the dataset index builder in Kaggle.
+1. Rerun the dataset index builder in Kaggle with the latest parser fixes.
 2. Inspect `dataset_summary.json` for unexpected plants, diseases, or split imbalance.
 3. Review `master_dataset.csv` samples for each dataset.
-4. Review exact duplicate groups if repeated images are visible across datasets.
-5. Create `02_train_plant_model.ipynb`.
-6. Train baseline plant identification model.
-7. Create `03_train_disease_model.ipynb`.
-8. Train baseline disease classification model.
+4. Confirm no incorrect plant classes such as `Data`, `Original Dataset`, or `Test Disease Severity Level` remain.
+5. Review exact duplicate groups if repeated images are visible across datasets.
+6. Create `02_train_plant_model.ipynb`.
+7. Train baseline plant identification model.
+8. Create `03_train_disease_model.ipynb`.
+9. Train baseline disease classification model.
 
 ## Future Roadmap
 

@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import re
 
-from viriditas.data.normalizer import canonical_disease, canonical_plant, normalize_token, remove_plant_prefix
+from viriditas.data.normalizer import (
+    canonical_disease,
+    canonical_plant,
+    is_generic_plant_label,
+    normalize_token,
+    remove_plant_prefix,
+)
 from viriditas.data.schemas import ParsedLabel
 
 HEALTHY_PATTERN = re.compile(r"(^|[\s_/-])healthy($|[\s_/-])|(^|[\s_/-])normal($|[\s_/-])", re.I)
@@ -37,7 +43,11 @@ def parse_label(
     else:
         plant_raw, disease_raw = _split_single_label(raw)
 
+    if plant_hint and is_generic_plant_label(plant_raw):
+        plant_raw = plant_hint
+
     plant = canonical_plant(plant_raw)
+    disease_raw = remove_plant_prefix(disease_raw, plant)
     disease = canonical_disease(disease_raw)
     is_healthy = disease == "Healthy" or bool(HEALTHY_PATTERN.search(raw))
 

@@ -2,6 +2,15 @@
 
 ## 2026-07-10
 
+### Fixed
+
+- Improved label parsing after Kaggle metadata validation.
+- Replaced generic container folder labels such as `Data`, `Original Dataset`, `Pea Plant Dataset`, and `Test Disease Severity Level` with plant hints inferred from dataset names.
+- Collapsed augmentation operation suffixes such as `Brightness Adjusted`, `Gaussian Noise`, and `Rotated` back into the base disease label.
+- Removed repeated plant names from disease labels when they appear as disease suffixes.
+
+## 2026-07-10
+
 ### Added
 
 - Added exact duplicate image detection with SHA-256 hashing in `src/viriditas/data/duplicates.py`.
