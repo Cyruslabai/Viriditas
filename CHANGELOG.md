@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-07-10
+
+### Added
+
+- Added exact duplicate image detection with SHA-256 hashing in `src/viriditas/data/duplicates.py`.
+- Added unit tests for duplicate hashing and duplicate group detection.
+
+### Changed
+
+- Added `.idea/` to `.gitignore` so IDE project files do not get published.
+- Replaced the manual duplicate-check script with a deterministic unit test.
+
 ## 2026-07-04
 
 ### Added

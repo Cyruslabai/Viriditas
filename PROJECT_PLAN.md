@@ -246,6 +246,7 @@ Completed:
 - Implemented `src/viriditas/data/` preprocessing package
 - Implemented Kaggle/local dataset index builder entrypoints
 - Added tests for label parsing, layout detection, and split generation
+- Added exact duplicate image detection using SHA-256 hashes
 
 In progress:
 
@@ -253,7 +254,6 @@ In progress:
 
 Not started:
 
-- Duplicate detection
 - Plant identification model training
 - Disease classification model training
 - Recommendation engine
@@ -323,12 +323,11 @@ Decision: Use a small Python package under `src/viriditas/` and keep notebooks t
 1. Run the dataset index builder in Kaggle.
 2. Inspect `dataset_summary.json` for unexpected plants, diseases, or split imbalance.
 3. Review `master_dataset.csv` samples for each dataset.
-4. Add duplicate detection if repeated images are visible across datasets.
-5. Build `plant_id_dataset.csv` and `disease_dataset.csv` task-specific views.
-6. Create `02_train_plant_model.ipynb`.
-7. Train baseline plant identification model.
-8. Create `03_train_disease_model.ipynb`.
-9. Train baseline disease classification model.
+4. Review exact duplicate groups if repeated images are visible across datasets.
+5. Create `02_train_plant_model.ipynb`.
+6. Train baseline plant identification model.
+7. Create `03_train_disease_model.ipynb`.
+8. Train baseline disease classification model.
 
 ## Future Roadmap
 

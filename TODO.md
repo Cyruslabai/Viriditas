@@ -1,6 +1,6 @@
 # VIRIDITAS TODO
 
-Last updated: 2026-07-04
+Last updated: 2026-07-10
 
 ## Documentation
 
@@ -28,7 +28,7 @@ Last updated: 2026-07-04
 - [x] Build `plant_id_dataset.csv`
 - [x] Build `disease_dataset.csv`
 - [x] Generate train/validation/test split CSV files
-- [ ] Add duplicate image detection
+- [x] Add duplicate image detection
 - [x] Add dataset summary reports
 - [x] Add Kaggle dataset index builder notebook
 - [x] Add local/Kaggle dataset index builder script
@@ -41,6 +41,7 @@ Last updated: 2026-07-04
 - [x] Add tests for label parsing
 - [x] Add tests for layout detection
 - [x] Add tests for split generation
+- [x] Add tests for duplicate detection
 - [ ] Add tests for metadata schema validation
 
 ## Training
