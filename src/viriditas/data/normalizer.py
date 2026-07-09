@@ -65,8 +65,8 @@ DISEASE_ALIASES = {
     "haunglongbing citrus greening": "Huanglongbing Citrus Greening",
     "cercospora leaf spot gray leaf spot": "Cercospora Leaf Spot Gray Leaf Spot",
     "spider mites two spotted spider mite": "Spider Mites Two-Spotted Spider Mite",
+    "angular leafspot": "Angular Leaf Spot",
 }
-
 
 def normalize_token(value: str) -> str:
     """Convert dataset label text into spaced, readable text."""

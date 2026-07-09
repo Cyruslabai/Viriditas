@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import re
+
 from pathlib import Path
 
 from viriditas.data.config import NON_CLASS_DIRECTORIES, SPLIT_ALIASES
 from viriditas.data.schemas import LabelInfo
+
+_TRAILING_DIGITS = re.compile(r"\d+$")
 
 
 def infer_label_info(image_path: Path, dataset_root: Path) -> LabelInfo:
@@ -24,6 +28,27 @@ def infer_label_info(image_path: Path, dataset_root: Path) -> LabelInfo:
         layout_type = "split_class_folder"
 
     label_parts = _trim_non_class_prefix(label_parts)
+
+    if not label_parts:
+        # No class folder exists between the dataset/split root and the
+        # image file itself. Some datasets (e.g. strawberry-disease-
+        # detection-dataset) encode the label in the filename instead,
+        # such as "angular_leafspot351.jpg". Fall back to parsing that.
+        filename_label = _label_from_filename(image_path)
+        if filename_label:
+            return LabelInfo(
+                source_split=source_split,
+                original_label=filename_label,
+                label_parts=(),
+                layout_type="filename_label" if not source_split else "split_filename_label",
+            )
+        return LabelInfo(
+            source_split=source_split,
+            original_label="Unknown",
+            label_parts=(),
+            layout_type=layout_type,
+        )
+
     original_label = _infer_original_label(label_parts)
 
     if len(label_parts) >= 2 and original_label == "___".join(label_parts[-2:]):
@@ -64,6 +89,21 @@ def _infer_original_label(label_parts: tuple[str, ...]) -> str:
         return last
 
     return "___".join(label_parts[-2:])
+
+
+def _label_from_filename(image_path: Path) -> str:
+    """Derive a class label from a filename when no class folder exists.
+
+    Handles filenames such as ``angular_leafspot351.jpg`` by stripping the
+    trailing image-index digits and extension, leaving ``angular_leafspot``.
+    Returns an empty string if nothing usable remains (e.g. filenames that
+    are purely numeric, like ``0001.jpg``, which carry no label at all).
+    """
+
+    stem = image_path.stem
+    stem = _TRAILING_DIGITS.sub("", stem)
+    stem = stem.strip("_- ")
+    return stem
 
 
 def _looks_like_combined_label(value: str) -> bool:

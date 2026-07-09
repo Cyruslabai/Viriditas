@@ -2,12 +2,24 @@
 
 ## 2026-07-10
 
+### Added
+
+- Added `docs/JOURNAL.md` to record the full VIRIDITAS engineering timeline, Kaggle findings, current risks, and resume point.
+- Added `docs/KAGGLE_RUNBOOK.md` with the GitHub API ZIP download cell, preprocessing command, and validation checks for Kaggle restarts.
+
+### Changed
+
+- Updated `README.md`, `PROJECT_PLAN.md`, and `TODO.md` with the current Kaggle preprocessing checkpoint and next validation tasks.
+
+## 2026-07-10
+
 ### Fixed
 
 - Improved label parsing after Kaggle metadata validation.
 - Replaced generic container folder labels such as `Data`, `Original Dataset`, `Pea Plant Dataset`, and `Test Disease Severity Level` with plant hints inferred from dataset names.
 - Collapsed augmentation operation suffixes such as `Brightness Adjusted`, `Gaussian Noise`, and `Rotated` back into the base disease label.
 - Removed repeated plant names from disease labels when they appear as disease suffixes.
+- Cleared cached `viriditas` modules in the Kaggle runner so reruns use freshly downloaded parser code.
 
 ## 2026-07-10
 

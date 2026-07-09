@@ -8,6 +8,12 @@ The current engineering milestone is a metadata-driven dataset pipeline. Instead
 
 This repository currently contains an earlier Flask prototype for plant disease prediction and sensor-based irrigation monitoring. The next phase is to refactor the project into a scalable VIRIDITAS pipeline with separate dataset indexing, model training, inference, and recommendation components.
 
+Latest preprocessing checkpoint:
+
+- Kaggle successfully indexed `201094` images from the selected 13 dataset roots.
+- The pipeline writes metadata CSVs and label maps under `/kaggle/working/data/metadata`.
+- Validation found generic folder labels and augmentation suffixes; parser fixes have been added and must be rerun in Kaggle before model training.
+
 ## Target Features
 
 - Plant identification from leaf images
@@ -80,6 +86,9 @@ VIRIDITAS/
 |       |-- inference/             Local inference pipeline
 |       |-- recommendations/       Treatment and guidance engine
 |-- tests/                         Automated tests for preprocessing
+|-- docs/
+|   |-- JOURNAL.md                 Chronological engineering journal
+|   |-- KAGGLE_RUNBOOK.md          Kaggle restart and rerun guide
 |-- PROJECT_PLAN.md                Single source of truth
 |-- CHANGELOG.md                   Chronological project history
 |-- TODO.md                        Engineering task list
@@ -126,9 +135,17 @@ Run preprocessing tests locally:
 python -m unittest discover -s tests
 ```
 
+## Project Memory
+
+- `PROJECT_PLAN.md`: source of truth for architecture, decisions, current task, and roadmap.
+- `docs/JOURNAL.md`: chronological record of progress, Kaggle findings, blockers, and resume state.
+- `docs/KAGGLE_RUNBOOK.md`: exact Kaggle cells for downloading the repo, rerunning preprocessing, and validating metadata.
+- `CHANGELOG.md`: chronological list of major repository changes.
+- `TODO.md`: active engineering checklist.
+
 ## Next Milestone
 
-Run `01_dataset_index_builder.ipynb` in Kaggle, inspect `dataset_summary.json`, and validate the generated labels before starting model training.
+Rerun `01_dataset_index_builder.ipynb` in Kaggle with the latest parser fixes, inspect `dataset_summary.json`, confirm the generic plant labels are gone, and review unknown disease rows before starting model training.
 
 For the detailed engineering plan, see `PROJECT_PLAN.md`.
 

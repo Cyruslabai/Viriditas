@@ -1,6 +1,6 @@
 # VIRIDITAS Project Plan
 
-Last updated: 2026-07-04
+Last updated: 2026-07-10
 
 ## Project Vision
 
@@ -82,6 +82,9 @@ VIRIDITAS/
 |       |-- inference/             End-to-end prediction pipeline
 |       |-- recommendations/       Treatment and guidance generation
 |-- tests/                         Unit and integration tests
+|-- docs/
+|   |-- JOURNAL.md                 Chronological project memory
+|   |-- KAGGLE_RUNBOOK.md          Kaggle restart and rerun guide
 |-- PROJECT_PLAN.md
 |-- README.md
 |-- CHANGELOG.md
@@ -265,6 +268,7 @@ Completed:
 - Added exact duplicate image detection using SHA-256 hashes
 - Validated Kaggle metadata output for 201,094 images
 - Improved parser rules for generic dataset folders and augmented class folders
+- Added a project journal and Kaggle runbook so progress can be resumed after Kaggle session resets
 
 In progress:
 
@@ -278,7 +282,19 @@ Not started:
 
 ## Current Task
 
-Run `notebooks/01_dataset_index_builder.ipynb` in Kaggle using the configured dataset roots, then validate `dataset_summary.json`, `master_dataset.csv`, and label maps before training.
+Rerun `notebooks/01_dataset_index_builder.ipynb` in Kaggle using the latest GitHub code, then validate `dataset_summary.json`, `master_dataset.csv`, and label maps before training.
+
+Immediate validation checks:
+
+- Confirm `master_dataset.csv` still indexes about `201094` images.
+- Confirm plant labels `Data`, `Original Dataset`, `Pea Plant Dataset`, and `Test Disease Severity Level` have zero rows.
+- Review remaining `Unknown` disease rows.
+- Review class balance and duplicate groups before creating training notebooks.
+
+Resume guide:
+
+- Use `docs/KAGGLE_RUNBOOK.md` to redownload the repo and rerun preprocessing in Kaggle.
+- Use `docs/JOURNAL.md` for the chronological record of what happened and why.
 
 ## Implemented Dataset Index Builder Architecture
 

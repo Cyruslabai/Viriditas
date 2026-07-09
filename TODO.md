@@ -8,6 +8,8 @@ Last updated: 2026-07-10
 - [x] Update `README.md`
 - [x] Create `CHANGELOG.md`
 - [x] Create `TODO.md`
+- [x] Create `docs/JOURNAL.md`
+- [x] Create `docs/KAGGLE_RUNBOOK.md`
 - [x] Keep documentation updated after every major architecture or implementation change
 
 ## Dataset Pipeline
@@ -38,6 +40,9 @@ Last updated: 2026-07-10
 - [x] Fix generic container folder labels after Kaggle validation
 - [x] Collapse augmented disease labels into base disease classes
 - [ ] Rerun Kaggle preprocessing after parser fixes
+- [ ] Confirm bad plant labels are zero after rerun
+- [ ] Review remaining unknown disease rows after rerun
+- [ ] Review duplicate groups for train/test leakage risk
 
 ## Testing
 
