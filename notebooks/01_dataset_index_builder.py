@@ -23,6 +23,7 @@ for module_name in list(sys.modules):
 from viriditas.data.index_builder import build_dataset_index
 from viriditas.data.io import write_label_map, write_records_csv, write_split_csvs, write_summary
 from viriditas.data.splits import assign_splits
+from viriditas.data.duplicates import deduplicate_records
 
 
 DATASET_ROOTS = [
@@ -48,6 +49,13 @@ PATH_MODE = "absolute"
 def run() -> None:
     records = build_dataset_index(DATASET_ROOTS, path_mode=PATH_MODE)
     records = assign_splits(records, preserve_source_splits=True)
+
+    records, dedup_stats = deduplicate_records(
+        records,
+        prefer_split="train",
+        cache_path=OUTPUT_DIR / "hash_cache.csv",
+    )
+    print("Deduplication:", dedup_stats)
 
     write_records_csv(records, OUTPUT_DIR / "master_dataset.csv")
     write_records_csv(records, OUTPUT_DIR / "plant_id_dataset.csv")
