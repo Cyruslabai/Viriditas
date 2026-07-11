@@ -6,6 +6,7 @@ This module finds exact duplicate images using SHA-256 hashes.
 
 from __future__ import annotations
 
+import csv
 import hashlib
 from collections import defaultdict
 from dataclasses import replace
@@ -73,10 +74,58 @@ def find_duplicates(
     return duplicates
 
 
+def _load_hash_cache(cache_path: Path) -> dict[str, tuple[int, float, str]]:
+    """Load a cache of image_path -> (file_size, mtime, hash).
+
+    Returns an empty dict if no cache file exists yet.
+    """
+
+    if not cache_path.exists():
+        return {}
+
+    cache: dict[str, tuple[int, float, str]] = {}
+    with open(cache_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            cache[row["image_path"]] = (
+                int(row["file_size"]),
+                float(row["mtime"]),
+                row["file_hash"],
+            )
+    return cache
+
+
+def _save_hash_cache(cache_path: Path, cache: dict[str, tuple[int, float, str]]) -> None:
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(cache_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["image_path", "file_size", "mtime", "file_hash"])
+        for image_path, (file_size, mtime, file_hash) in cache.items():
+            writer.writerow([image_path, file_size, mtime, file_hash])
+
+
+def hash_with_cache(image_path: str, cache: dict[str, tuple[int, float, str]]) -> str:
+    """Return a file's SHA-256 hash, reusing a cached value when the file's
+    size and modification time haven't changed since it was last hashed.
+    """
+
+    stat = Path(image_path).stat()
+    cached = cache.get(image_path)
+    if cached is not None:
+        cached_size, cached_mtime, cached_hash = cached
+        if cached_size == stat.st_size and cached_mtime == stat.st_mtime:
+            return cached_hash
+
+    file_hash = sha256_file(image_path)
+    cache[image_path] = (stat.st_size, stat.st_mtime, file_hash)
+    return file_hash
+
+
 def deduplicate_records(
     records: list[ImageRecord],
     *,
     prefer_split: str = "train",
+    cache_path: str | Path | None = None,
 ) -> tuple[list[ImageRecord], dict]:
     """Hash every record's image, tag it with a duplicate_group_id, and
     resolve cross-split duplicates to prevent train/val/test leakage.
@@ -99,21 +148,39 @@ def deduplicate_records(
         prefer_split: Which split to keep when a duplicate group spans
             multiple splits. Defaults to "train" so evaluation data stays
             as clean as possible.
+        cache_path: Optional path to a CSV cache file mapping image_path to
+            a previously computed hash. When provided, files whose size and
+            modification time match the cache are not re-hashed, making
+            repeat runs in the same (or a restored) working directory much
+            faster. Pass ``None`` to always hash from scratch.
 
     Returns:
         A tuple of (deduplicated records, summary stats dict).
     """
+
+    cache_path = Path(cache_path) if cache_path is not None else None
+    hash_cache = _load_hash_cache(cache_path) if cache_path else {}
+    cache_hits = 0
 
     hash_to_records: dict[str, list[ImageRecord]] = defaultdict(list)
     unreadable: list[ImageRecord] = []
 
     for record in records:
         try:
-            file_hash = sha256_file(record.image_path)
+            if cache_path:
+                before = len(hash_cache)
+                file_hash = hash_with_cache(record.image_path, hash_cache)
+                if len(hash_cache) == before:
+                    cache_hits += 1
+            else:
+                file_hash = sha256_file(record.image_path)
         except Exception:
             unreadable.append(record)
             continue
         hash_to_records[file_hash].append(record)
+
+    if cache_path:
+        _save_hash_cache(cache_path, hash_cache)
 
     kept_records: list[ImageRecord] = []
     cross_split_groups = 0
@@ -139,9 +206,6 @@ def deduplicate_records(
             same_split_groups += 1
             kept_records.extend(tagged_group)
 
-    # Unreadable files are kept untouched (no duplicate_group_id) rather
-    # than silently dropped, so index building doesn't lose data because
-    # of a transient read error.
     kept_records.extend(unreadable)
 
     stats = {
@@ -152,6 +216,7 @@ def deduplicate_records(
         "cross_split_groups": cross_split_groups,
         "same_split_groups": same_split_groups,
         "rows_dropped_for_leakage": rows_dropped,
+        "cache_hits": cache_hits,
     }
 
     return kept_records, stats
