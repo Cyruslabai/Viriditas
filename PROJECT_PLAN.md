@@ -1,6 +1,6 @@
 # VIRIDITAS Project Plan
 
-Last updated: 2026-07-10
+Last updated: 2026-07-11
 
 ## Project Vision
 
@@ -55,10 +55,11 @@ The repository currently contains an earlier Flask prototype:
 - `images/`: Training graph images
 - `src/viriditas/data/`: Metadata-based preprocessing package
 - `scripts/build_dataset_index.py`: Dataset index builder CLI
-- `notebooks/01_dataset_index_builder.ipynb`: Kaggle preprocessing notebook
+- `notebooks/01_dataset_index_builder.ipynb` / `.py`: Kaggle preprocessing notebook and runner
+- `data/metadata/`: Generated metadata CSVs plus the committed `hash_cache.csv` dedup cache
 - `tests/`: Unit tests for preprocessing behavior
 
-The Flask prototype is useful but does not yet match the planned scalable VIRIDITAS inference architecture. The preprocessing layer is now the first implemented part of the new VIRIDITAS architecture.
+The Flask prototype is useful but does not yet match the planned scalable VIRIDITAS inference architecture. The preprocessing layer is now the first implemented part of the new VIRIDITAS architecture, and is now considered feature-complete and validated for the initial 13 datasets.
 
 ## Planned Folder Structure
 
@@ -66,7 +67,7 @@ The Flask prototype is useful but does not yet match the planned scalable VIRIDI
 VIRIDITAS/
 |-- data/
 |   |-- raw/                       External datasets, usually ignored by git
-|   |-- metadata/                  Generated dataset indexes and split CSVs
+|   |-- metadata/                  Generated dataset indexes, split CSVs, and hash_cache.csv
 |-- notebooks/
 |   |-- 01_dataset_index_builder.ipynb
 |   |-- 01_dataset_index_builder.py
@@ -77,7 +78,7 @@ VIRIDITAS/
 |   |-- build_dataset_index.py
 |-- src/
 |   |-- viriditas/
-|       |-- data/                  Scanners, parsers, label normalization
+|       |-- data/                  Scanners, parsers, label normalization, dedup
 |       |-- models/                Training and model utilities
 |       |-- inference/             End-to-end prediction pipeline
 |       |-- recommendations/       Treatment and guidance generation
@@ -131,6 +132,7 @@ Recommended metadata files:
 - `label_map_plants.json`: Plant class mapping
 - `label_map_diseases.json`: Disease class mapping
 - `dataset_summary.json`: Quick counts by dataset, plant, disease, and split
+- `hash_cache.csv`: SHA-256 hash cache used for duplicate detection and dedup speedup
 
 ## Current Kaggle Dataset Roots
 
@@ -161,10 +163,14 @@ The index builder should support:
 - Nested plant and disease folders
 - PlantVillage-style labels such as `Tomato___Early_blight`
 - Dataset-specific label naming variations
+- Flat split folders with no class subfolder, where the label is encoded in the filename
+  (e.g. `test/angular_leafspot351.jpg`)
+- Nested non-informative container folders (e.g. `Test Disease Severity Level/Level 1/`)
+  that must be stripped before falling back to filename-based labels
 
 ## Canonical Metadata Schema
 
-Initial recommended schema:
+Current schema (implemented and populated end to end as of 2026-07-11):
 
 ```text
 image_path
@@ -185,6 +191,10 @@ split
 ```
 
 `image_path` should be absolute or dataset-root-relative depending on notebook portability needs. For Kaggle notebooks, root-relative paths are usually safer.
+
+`duplicate_group_id` is the first 16 hex characters of each image's SHA-256 hash. Every
+row has one, whether or not it is part of a duplicate group, so duplicate groups can be
+inspected directly from `master_dataset.csv` without rerunning detection.
 
 ## Model Architecture Direction
 
@@ -252,6 +262,63 @@ Action:
 - Strip augmentation operation suffixes from disease labels.
 - Remove repeated plant names from disease labels when they appear as suffixes.
 
+### Decision: Add filename-based label fallback and non-informative folder stripping
+
+Date: 2026-07-11
+
+Reason:
+
+- The 2026-07-10 fix resolved bad plant labels, but the fix had not actually been
+  pushed to GitHub `main` (local/remote branches had diverged), so Kaggle kept running
+  stale code until this was caught and corrected.
+- After confirming the push, 2,507 `Unknown` disease rows remained, almost entirely
+  (2,500 of 2,507) from `strawberry-disease-detection-dataset`.
+- That dataset uses two folder layouts the parser didn't handle: a flat `test/` split
+  folder with no class subfolder (disease name encoded in the filename instead, e.g.
+  `angular_leafspot351.jpg`), and a nested `Test Disease Severity Level/Level 1/`
+  container that was being misparsed into fake "Level 1"/"Level 2" disease classes.
+
+Action:
+
+- Added a filename-based label extraction fallback in `layout_detection.py`, triggered
+  when no usable class folder exists.
+- Added stripping of non-informative folder names (severity-level containers) so the
+  parser falls through to the filename fallback instead of using the container name
+  as the label.
+- Added one disease alias (`angular leafspot` -> `Angular Leaf Spot`) for consistent casing.
+
+### Decision: Wire duplicate detection into the pipeline and resolve cross-split leakage
+
+Date: 2026-07-11
+
+Reason:
+
+- `duplicates.py` had SHA-256 hashing logic and unit tests, but was never actually
+  called from `index_builder.py`. `duplicate_group_id` existed in the planned schema
+  but was never populated in real output.
+- A manual duplicate-group review found 7,571 duplicate groups (15,209 images) across
+  the dataset. 3,057 of those groups (6,176 images) spanned more than one split
+  (train/val/test), almost entirely from the augmented plant-village-style datasets
+  (peach, pepper, cherry) and the strawberry and tomato datasets. This is a real
+  train/test leakage risk that would inflate evaluation metrics during model training.
+
+Action:
+
+- Added `deduplicate_records()` to `duplicates.py`, tagging every image with a
+  `duplicate_group_id` and, for any group spanning multiple splits, keeping exactly
+  one copy (preferring `train`) and dropping the rest.
+- Added a hash cache (`data/metadata/hash_cache.csv`) so repeat builds skip re-hashing
+  unchanged files, and committed it to the repo (with a `.gitignore` exception) so the
+  speedup persists across fresh Kaggle sessions, not just within one session.
+- Wired the new function into `01_dataset_index_builder.py`, run immediately after
+  `assign_splits()` and before any CSV is written.
+- Fixed `splits.py`'s `_replace_split` to use `dataclasses.replace` instead of manually
+  listing every field, so it won't silently drop future schema additions the way it
+  would have dropped `duplicate_group_id` if left as-is.
+
+Result: dataset size went from 201,094 to 197,975 images (3,119 rows dropped), with
+0 cross-split leakage confirmed via a fresh pipeline rebuild (not just a manual patch).
+
 ## Current Progress
 
 Completed:
@@ -269,10 +336,21 @@ Completed:
 - Validated Kaggle metadata output for 201,094 images
 - Improved parser rules for generic dataset folders and augmented class folders
 - Added a project journal and Kaggle runbook so progress can be resumed after Kaggle session resets
+- Verified 2026-07-10 parser fixes were live on GitHub after resolving a local/remote branch divergence
+- Reran the full dataset index builder in Kaggle and confirmed 0 rows for all four bad plant labels
+- Added filename-based label extraction fallback for datasets with no class folders
+- Added non-informative folder stripping for nested severity-level subfolders
+- Resolved 2,507 Unknown disease rows down to 7 (a genuinely unlabeled folder in the apple dataset)
+- Fixed a stray `agriai` import left over from the project rename
+- Wired duplicate detection into the pipeline (`deduplicate_records()`), populating
+  `duplicate_group_id` on every row for the first time
+- Resolved 6,176 cross-split leaked images (3,057 duplicate groups) down to 0, dataset
+  now 197,975 images
+- Added and committed a hash cache to speed up future rebuilds
 
 In progress:
 
-- Rerun Kaggle preprocessing after parser fixes and inspect generated metadata
+- None — preprocessing/label-quality/duplicate-leakage milestones are complete
 
 Not started:
 
@@ -282,17 +360,24 @@ Not started:
 
 ## Current Task
 
-Rerun `notebooks/01_dataset_index_builder.ipynb` in Kaggle using the latest GitHub code, then validate `dataset_summary.json`, `master_dataset.csv`, and label maps before training.
+Start model training. Preprocessing is validated and stable: 197,975 images, 0 bad
+plant labels, 7 residual genuinely-unlabeled images (apple dataset, low priority),
+0 cross-split duplicate leakage, all wired permanently into the pipeline (not manual
+patches). Next concrete steps, in order:
 
-Immediate validation checks:
-
-- Confirm `master_dataset.csv` still indexes about `201094` images.
-- Confirm plant labels `Data`, `Original Dataset`, `Pea Plant Dataset`, and `Test Disease Severity Level` have zero rows.
-- Review remaining `Unknown` disease rows.
-- Review class balance and duplicate groups before creating training notebooks.
+1. Decide handling for the 7 remaining unlabeled apple images (drop from
+   `master_dataset.csv` before training, or leave as a tiny `Unknown` class — dropping
+   is the simpler and lower-risk default).
+2. Create `notebooks/02_train_plant_model.ipynb`.
+3. Train a baseline plant identification model (see Model Architecture Direction above
+   for the recommended starting architectures).
 
 Resume guide:
 
+- To rebuild the dataset index from a fresh Kaggle session: pull the repo via the
+  GitHub API cell, `%cd` into it, then `%run notebooks/01_dataset_index_builder.py`.
+  This now runs label parsing, split assignment, and duplicate resolution in one pass
+  and reuses `data/metadata/hash_cache.csv` for already-hashed files.
 - Use `docs/KAGGLE_RUNBOOK.md` to redownload the repo and rerun preprocessing in Kaggle.
 - Use `docs/JOURNAL.md` for the chronological record of what happened and why.
 
@@ -304,13 +389,14 @@ Recommended modules:
 src/viriditas/data/
 |-- __init__.py
 |-- config.py              Dataset paths and supported image extensions
-|-- schemas.py             Metadata dataclasses or typed dictionaries
+|-- schemas.py             Metadata dataclasses, including duplicate_group_id
 |-- scanners.py            Recursive image discovery
-|-- layout_detection.py    Detect class-folder and split-folder layouts
+|-- layout_detection.py    Detect class-folder, split-folder, and filename-based layouts
 |-- label_parser.py        Extract plant and disease labels
 |-- normalizer.py          Canonical label normalization
 |-- index_builder.py       Build master dataframe
 |-- splits.py              Train/validation/test split generation
+|-- duplicates.py          SHA-256 hashing, duplicate grouping, cross-split dedup
 |-- io.py                  CSV and JSON output helpers
 ```
 
@@ -354,15 +440,15 @@ Decision: Use a small Python package under `src/viriditas/` and keep notebooks t
 
 ## Next Tasks
 
-1. Rerun the dataset index builder in Kaggle with the latest parser fixes.
-2. Inspect `dataset_summary.json` for unexpected plants, diseases, or split imbalance.
-3. Review `master_dataset.csv` samples for each dataset.
-4. Confirm no incorrect plant classes such as `Data`, `Original Dataset`, or `Test Disease Severity Level` remain.
-5. Review exact duplicate groups if repeated images are visible across datasets.
-6. Create `02_train_plant_model.ipynb`.
-7. Train baseline plant identification model.
-8. Create `03_train_disease_model.ipynb`.
-9. Train baseline disease classification model.
+1. Decide handling for the 7 remaining unlabeled apple images.
+2. Create `02_train_plant_model.ipynb`.
+3. Train baseline plant identification model.
+4. Create `03_train_disease_model.ipynb`.
+5. Train baseline disease classification model.
+6. Add unit tests for the filename-based label fallback and non-informative folder
+   stripping (both currently untested despite being load-bearing for the strawberry
+   dataset's 3,243 images).
+7. Add unit tests for `deduplicate_records()` and the hash cache.
 
 ## Future Roadmap
 

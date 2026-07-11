@@ -1,6 +1,6 @@
 # VIRIDITAS TODO
 
-Last updated: 2026-07-10
+Last updated: 2026-07-11
 
 ## Documentation
 
@@ -34,15 +34,25 @@ Last updated: 2026-07-10
 - [x] Add dataset summary reports
 - [x] Add Kaggle dataset index builder notebook
 - [x] Add local/Kaggle dataset index builder script
-- [ ] Run Kaggle preprocessing on the selected 13 datasets
-- [ ] Inspect generated `dataset_summary.json`
-- [ ] Review sample rows from `master_dataset.csv`
+- [x] Run Kaggle preprocessing on the selected 13 datasets
+- [x] Inspect generated `dataset_summary.json`
+- [x] Review sample rows from `master_dataset.csv`
 - [x] Fix generic container folder labels after Kaggle validation
 - [x] Collapse augmented disease labels into base disease classes
-- [ ] Rerun Kaggle preprocessing after parser fixes
-- [ ] Confirm bad plant labels are zero after rerun
-- [ ] Review remaining unknown disease rows after rerun
-- [ ] Review duplicate groups for train/test leakage risk
+- [x] Rerun Kaggle preprocessing after parser fixes
+- [x] Confirm bad plant labels are zero after rerun
+- [x] Review remaining unknown disease rows after rerun
+- [x] Add filename-based label fallback for datasets with no class folders
+- [x] Strip non-informative nested folders (severity-level subfolders) before parsing
+- [x] Fix stray `agriai` import in `scanners.py`
+- [x] Review duplicate groups for train/test leakage risk
+- [x] Wire duplicate detection into `index_builder.py` pipeline (previously standalone/unused)
+- [x] Populate `duplicate_group_id` in `master_dataset.csv` for real
+- [x] Resolve cross-split duplicate leakage (6,176 images / 3,057 groups -> 0)
+- [x] Add hash cache to speed up repeat dedup runs
+- [x] Commit hash cache to GitHub with a `.gitignore` exception
+- [x] Fix `_replace_split` in `splits.py` to use `dataclasses.replace` (avoid silently dropping future fields)
+- [ ] Decide handling for the 7 remaining unlabeled apple images (drop vs. keep as tiny Unknown class)
 
 ## Testing
 
@@ -51,6 +61,10 @@ Last updated: 2026-07-10
 - [x] Add tests for split generation
 - [x] Add tests for duplicate detection
 - [x] Add tests for generic folder and augmentation label parsing
+- [ ] Add tests for filename-based label fallback
+- [ ] Add tests for non-informative folder stripping (severity-level subfolders)
+- [ ] Add tests for `deduplicate_records()` and cross-split resolution
+- [ ] Add tests for the hash cache (cache hit/miss behavior)
 - [ ] Add tests for metadata schema validation
 
 ## Training
