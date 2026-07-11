@@ -35,8 +35,8 @@ __pycache__/
 
 # Dataset
 /dataset/
-/data/
-
+/data/*
+!/data/metadata/
 # Large model files
 *.h5
 *.pt
