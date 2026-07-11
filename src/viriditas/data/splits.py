@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Sequence
+from dataclasses import replace
 import random
 
 from viriditas.data.schemas import ImageRecord
@@ -95,19 +96,7 @@ def _split_boundaries(count: int, train_ratio: float, val_ratio: float) -> tuple
 
 
 def _replace_split(record: ImageRecord, split: str) -> ImageRecord:
-    return ImageRecord(
-        image_path=record.image_path,
-        dataset_name=record.dataset_name,
-        dataset_root=record.dataset_root,
-        source_split=record.source_split,
-        original_label=record.original_label,
-        plant=record.plant,
-        disease=record.disease,
-        is_healthy=record.is_healthy,
-        task_plant_label=record.task_plant_label,
-        task_disease_label=record.task_disease_label,
-        file_name=record.file_name,
-        file_ext=record.file_ext,
-        image_id=record.image_id,
-        split=split,
-    )
+    # Uses dataclasses.replace instead of manually listing every field, so
+    # new ImageRecord fields (e.g. duplicate_group_id) are carried through
+    # automatically instead of silently dropped.
+    return replace(record, split=split)

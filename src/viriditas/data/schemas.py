@@ -20,6 +20,7 @@ CSV_FIELDNAMES = [
     "file_name",
     "file_ext",
     "image_id",
+    "duplicate_group_id",
     "split",
 ]
 
@@ -61,6 +62,7 @@ class ImageRecord:
     file_ext: str
     image_id: str
     split: str = ""
+    duplicate_group_id: str = ""
 
     def to_csv_row(self) -> dict[str, str]:
         row = asdict(self)
@@ -74,4 +76,3 @@ def make_image_id(dataset_name: str, image_path: Path) -> str:
     normalized = image_path.as_posix().lower()
     safe_dataset = dataset_name.strip().lower().replace(" ", "_")
     return f"{safe_dataset}:{normalized}"
-
