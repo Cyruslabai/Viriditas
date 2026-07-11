@@ -10,6 +10,11 @@ from viriditas.data.config import NON_CLASS_DIRECTORIES, SPLIT_ALIASES
 from viriditas.data.schemas import LabelInfo
 
 _TRAILING_DIGITS = re.compile(r"\d+$")
+_SEVERITY_LEVEL_PATTERN = re.compile(r"^level\s*\d+$", re.I)
+
+_NON_INFORMATIVE_PARTS = frozenset({
+    "test disease severity level",
+})
 
 
 def infer_label_info(image_path: Path, dataset_root: Path) -> LabelInfo:
@@ -28,12 +33,16 @@ def infer_label_info(image_path: Path, dataset_root: Path) -> LabelInfo:
         layout_type = "split_class_folder"
 
     label_parts = _trim_non_class_prefix(label_parts)
+    label_parts = _strip_non_informative_parts(label_parts)
 
     if not label_parts:
-        # No class folder exists between the dataset/split root and the
-        # image file itself. Some datasets (e.g. strawberry-disease-
-        # detection-dataset) encode the label in the filename instead,
-        # such as "angular_leafspot351.jpg". Fall back to parsing that.
+        # No usable class folder exists between the dataset/split root and
+        # the image file itself (either there was never a class folder, or
+        # every folder in the chain turned out to be a generic/non-class
+        # container such as "Test Disease Severity Level/Level 1"). Some
+        # datasets (e.g. strawberry-disease-detection-dataset) encode the
+        # label in the filename instead, such as "angular_leafspot351.jpg".
+        # Fall back to parsing that.
         filename_label = _label_from_filename(image_path)
         if filename_label:
             return LabelInfo(
@@ -74,6 +83,34 @@ def _trim_non_class_prefix(parts: tuple[str, ...]) -> tuple[str, ...]:
     while len(trimmed) > 1 and _slug(trimmed[0]) in NON_CLASS_DIRECTORIES:
         trimmed.pop(0)
     return tuple(trimmed)
+
+
+def _strip_non_informative_parts(parts: tuple[str, ...]) -> tuple[str, ...]:
+    """Drop folder parts that are containers rather than real class labels.
+
+    Unlike ``_trim_non_class_prefix`` (which always leaves at least one
+    part, since it doesn't know whether what remains is real), this removes
+    *every* part matching a known non-informative pattern, even if that
+    leaves nothing behind. Callers should treat an empty result as "no
+    folder-based label available" and fall back to the filename.
+    """
+
+    kept = [part for part in parts if not _is_non_informative_part(part)]
+    return tuple(kept)
+
+
+def _is_non_informative_part(value: str) -> bool:
+    clean = _normalize_local(value)
+    if clean.lower() in _NON_INFORMATIVE_PARTS:
+        return True
+    return bool(_SEVERITY_LEVEL_PATTERN.match(clean))
+
+
+def _normalize_local(value: str) -> str:
+    # Local, lightweight normalization (avoids importing normalizer.py here
+    # to keep layout_detection.py's dependency surface small).
+    text = value.strip().replace("_", " ").replace("-", " ")
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _infer_original_label(label_parts: tuple[str, ...]) -> str:
