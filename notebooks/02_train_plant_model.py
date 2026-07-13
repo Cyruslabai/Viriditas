@@ -42,9 +42,11 @@ def make_dataset(df: pd.DataFrame, label_map: dict[str, int], split: str, shuffl
     paths = subset["image_path"].tolist()
     labels = [label_map[label] for label in subset["task_plant_label"]]
 
+
     def _load(path, label):
         image = tf.io.read_file(path)
-        image = tf.image.decode_jpeg(image, channels=3)
+        image = tf.image.decode_image(image, channels=3, expand_animations=False)
+        image.set_shape([None, None, 3])
         image = tf.image.resize(image, IMAGE_SIZE)
         image = tf.keras.applications.efficientnet_v2.preprocess_input(image)
         return image, label
