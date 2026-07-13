@@ -47,7 +47,12 @@ PATH_MODE = "absolute"
 
 
 def run() -> None:
-    records = build_dataset_index(DATASET_ROOTS, path_mode=PATH_MODE)
+    records = []
+    for i, root in enumerate(DATASET_ROOTS, 1):
+        print(f"[{i}/{len(DATASET_ROOTS)}] Scanning: {root}")
+        records.extend(build_dataset_index([root], path_mode=PATH_MODE))
+        print(f"  -> {len(records)} total records so far")
+
     records = assign_splits(records, preserve_source_splits=True)
 
     records, dedup_stats = deduplicate_records(
