@@ -42,10 +42,13 @@ def make_dataset(df: pd.DataFrame, label_map: dict[str, int], split: str, shuffl
     paths = subset["image_path"].tolist()
     labels = [label_map[label] for label in subset["task_plant_label"]]
 
-
     def _load(path, label):
         image = tf.io.read_file(path)
-        image = tf.image.decode_image(image, channels=3, expand_animations=False)
+        image = tf.image.decode_image(
+            image,
+            channels=3,
+            expand_animations=False,
+        )
         image.set_shape([None, None, 3])
         image = tf.image.resize(image, IMAGE_SIZE)
         image = tf.keras.applications.efficientnet_v2.preprocess_input(image)
@@ -55,26 +58,43 @@ def make_dataset(df: pd.DataFrame, label_map: dict[str, int], split: str, shuffl
     if shuffle:
         ds = ds.shuffle(buffer_size=min(len(paths), 10000), seed=SEED)
     ds = ds.map(_load, num_parallel_calls=tf.data.AUTOTUNE)
+    ds = ds.cache()
     ds = ds.batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
     return ds, len(paths)
 
-
 def build_model(num_classes: int) -> tf.keras.Model:
+
     base = tf.keras.applications.EfficientNetV2B0(
         include_top=False,
         weights="imagenet",
         input_shape=IMAGE_SIZE + (3,),
         pooling="avg",
     )
+
     base.trainable = False
 
-    inputs = tf.keras.Input(shape=IMAGE_SIZE + (3,))
-    x = base(inputs, training=False)
-    x = tf.keras.layers.Dropout(0.2)(x)
-    outputs = tf.keras.layers.Dense(num_classes, activation="softmax")(x)
-    model = tf.keras.Model(inputs, outputs)
-    return model, base
+    data_augmentation = tf.keras.Sequential([
+        tf.keras.layers.RandomFlip("horizontal"),
+        tf.keras.layers.RandomRotation(0.10),
+        tf.keras.layers.RandomZoom(0.10),
+        tf.keras.layers.RandomContrast(0.10),
+    ], name="data_augmentation")
 
+    inputs = tf.keras.Input(shape=IMAGE_SIZE + (3,))
+
+    x = data_augmentation(inputs)
+    x = base(x, training=False)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.2)(x)
+
+    outputs = tf.keras.layers.Dense(
+        num_classes,
+        activation="softmax"
+    )(x)
+
+    model = tf.keras.Model(inputs, outputs)
+
+    return model, base
 
 def compute_weights(df: pd.DataFrame, label_map: dict[str, int]) -> dict[int, float]:
     train_labels = df[df["split"] == "train"]["task_plant_label"].map(label_map)
@@ -85,6 +105,20 @@ def compute_weights(df: pd.DataFrame, label_map: dict[str, int]) -> dict[int, fl
     )
     return dict(zip(np.unique(train_labels), weights))
 
+
+checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    OUTPUT_DIR / "best_plant_model.keras",
+    monitor="val_loss",
+    save_best_only=True,
+    verbose=1,
+)
+
+early_stop = tf.keras.callbacks.EarlyStopping(
+    monitor="val_loss",
+    patience=2,
+    restore_best_weights=True,
+    verbose=1,
+)
 
 def run() -> None:
     print("GPUs available:", tf.config.list_physical_devices("GPU"))
@@ -117,6 +151,7 @@ def run() -> None:
         validation_data=val_ds,
         epochs=FROZEN_EPOCHS,
         class_weight=class_weights,
+        callbacks=[checkpoint, early_stop],
     )
 
     print("\n--- Phase 2: fine-tuning ---")
@@ -134,6 +169,7 @@ def run() -> None:
         validation_data=val_ds,
         epochs=FINE_TUNE_EPOCHS,
         class_weight=class_weights,
+        callbacks=[checkpoint, early_stop],
     )
 
     print("\n--- Test evaluation ---")
