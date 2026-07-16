@@ -58,7 +58,6 @@ def make_dataset(df: pd.DataFrame, label_map: dict[str, int], split: str, shuffl
     if shuffle:
         ds = ds.shuffle(buffer_size=min(len(paths), 10000), seed=SEED)
     ds = ds.map(_load, num_parallel_calls=tf.data.AUTOTUNE)
-    ds = ds.cache()
     ds = ds.batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
     return ds, len(paths)
 
