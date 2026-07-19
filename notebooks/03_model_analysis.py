@@ -25,7 +25,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 METADATA_DIR = (
     Path("/kaggle/working/data/metadata")
     if Path("/kaggle").exists()
-    else PROJECT_ROOT / "data" / "metadata"
+    else PROJECT_ROOT / "src" / "viriditas" / "data" / "metadata"
 )
 
 MODEL_DIR = (
@@ -38,7 +38,8 @@ OUTPUT_DIR = MODEL_DIR / "analysis"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 MODEL_PATH = MODEL_DIR / "best_plant_model.keras"
-
+IMAGE_SIZE = (224, 224)
+BATCH_SIZE = 32
 
 def load_test_data() -> tuple[pd.DataFrame, dict[str, int]]:
     df = pd.read_csv(METADATA_DIR / "plant_id_dataset.csv")

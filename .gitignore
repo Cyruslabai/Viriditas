@@ -20,31 +20,89 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
-# Virtual environment
-.venv/
+# ==========================================================
+# VIRIDITAS
+# ==========================================================
 
-# IDE files
-.idea/
-
-# Python cache
+# --------------------------
+# Python
+# --------------------------
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.so
 
-# Stale pre-rename package kept out of the repository if OneDrive refuses deletion
-/src/agriai/
+# --------------------------
+# Virtual environments
+# --------------------------
+.venv/
+venv/
+env/
 
-# Dataset
-/dataset/
-/data/*
-!/data/metadata/
-# Large model files
-*.h5
-*.pt
-*.pth
+# --------------------------
+# IDE
+# --------------------------
+.idea/
+.vscode/
 
-# Jupyter checkpoints
-.ipynb_checkpoints/
-
-# System files
+# --------------------------
+# Operating System
+# --------------------------
 .DS_Store
 Thumbs.db
+
+# --------------------------
+# Jupyter
+# --------------------------
+.ipynb_checkpoints/
+
+# --------------------------
+# Logs
+# --------------------------
+*.log
+logs/
+
+# --------------------------
+# TensorFlow / Keras Models
+# --------------------------
+*.keras
+*.h5
+*.ckpt
+checkpoint
+
+# Keep folder structure
+models/*
+!models/.gitkeep
+
+# --------------------------
+# Generated metadata
+# --------------------------
+data/metadata/*
+!data/metadata/.gitkeep
+
+src/viriditas/data/metadata/*
+!src/viriditas/data/metadata/.gitkeep
+
+# --------------------------
+# Analysis outputs
+# --------------------------
+analysis/
+outputs/
+reports/
+
+*.png
+*.pdf
+*.svg
+
+# --------------------------
+# Cache
+# --------------------------
+.cache/
+*.cache
+
+# --------------------------
+# Temporary files
+# --------------------------
+*.tmp
+*.bak
