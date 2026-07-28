@@ -1,2 +1,0 @@
-"""AgriAI core package."""
-

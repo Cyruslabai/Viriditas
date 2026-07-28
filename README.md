@@ -2,17 +2,19 @@
 
 VIRIDITAS is an AI-powered plant health system designed to identify a plant from a leaf image, diagnose plant-specific diseases, and eventually provide treatment, fertilizer, prevention, weather-aware, and local AI assistant guidance.
 
-The current engineering milestone is a metadata-driven dataset pipeline. Instead of copying images into new folders, VIRIDITAS will index existing Kaggle datasets in place and create standardized CSV metadata for training plant identification and disease classification models.
+The current engineering milestone is stabilizing the first plant identification baseline after completing the metadata-driven dataset pipeline. Instead of copying images into new folders, VIRIDITAS indexes existing Kaggle datasets in place and creates standardized CSV metadata for training plant identification and disease classification models.
 
 ## Current Status
 
-This repository currently contains an earlier Flask prototype for plant disease prediction and sensor-based irrigation monitoring. The next phase is to refactor the project into a scalable VIRIDITAS pipeline with separate dataset indexing, model training, inference, and recommendation components.
+This repository contains an earlier Flask prototype for plant disease prediction and sensor-based irrigation monitoring plus the newer VIRIDITAS data and training pipeline. The project is being refactored into separate dataset indexing, model training, analysis, inference, and recommendation components.
 
-Latest preprocessing checkpoint:
+Latest checkpoint:
 
-- Kaggle successfully indexed `201094` images from the selected 13 dataset roots.
-- The pipeline writes metadata CSVs and label maps under `/kaggle/working/data/metadata`.
-- Validation found generic folder labels and augmentation suffixes; parser fixes have been added and must be rerun in Kaggle before model training.
+- Preprocessing is validated at `197,975` images after duplicate-leakage resolution.
+- Bad generic plant labels are resolved; only 7 genuinely unlabeled apple images remain.
+- The plant identification trainer exists at `notebooks/02_train_plant_model.py`.
+- Local plant model artifacts exist under `models/.v01/`, but generated artifacts are ignored by git.
+- The analysis runner exists at `notebooks/03_model_analysis.py` and needs a small cleanup pass before its outputs are treated as reliable.
 
 ## Target Features
 
@@ -75,6 +77,9 @@ VIRIDITAS/
 |   |-- 01_dataset_index_builder.ipynb
 |   |-- 01_dataset_index_builder.py
 |   |-- 02_train_plant_model.ipynb
+|   |-- 02_train_plant_model.py
+|   |-- 03_model_analysis.ipynb
+|   |-- 03_model_analysis.py
 |   |-- 03_train_disease_model.ipynb
 |   |-- 04_inference.ipynb
 |-- scripts/
@@ -86,6 +91,7 @@ VIRIDITAS/
 |       |-- inference/             Local inference pipeline
 |       |-- recommendations/       Treatment and guidance engine
 |-- tests/                         Automated tests for preprocessing
+|-- models/                        Generated model artifacts; ignored except .gitkeep
 |-- docs/
 |   |-- JOURNAL.md                 Chronological engineering journal
 |   |-- KAGGLE_RUNBOOK.md          Kaggle restart and rerun guide
@@ -145,7 +151,7 @@ python -m unittest discover -s tests
 
 ## Next Milestone
 
-Rerun `01_dataset_index_builder.ipynb` in Kaggle with the latest parser fixes, inspect `dataset_summary.json`, confirm the generic plant labels are gone, and review unknown disease rows before starting model training.
+Fix and run `notebooks/03_model_analysis.py`, recover or rerun the plant training history, and record the baseline plant identification metrics before starting the disease classification model.
 
 For the detailed engineering plan, see `PROJECT_PLAN.md`.
 

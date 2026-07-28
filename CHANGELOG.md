@@ -1,3 +1,43 @@
+## 2026-07-19
+
+### Added
+
+- Added `notebooks/02_train_plant_model.py`, a Kaggle-friendly EfficientNetV2B0
+  plant identification trainer using class weights, data augmentation, frozen-base
+  training, fine-tuning, checkpointing, early stopping, and model/history output.
+- Added `notebooks/03_model_analysis.py` for plant-model evaluation: prediction
+  results, top-k accuracy, confusion matrix, classification report, per-class
+  accuracy, confidence analysis, misclassified samples, dataset-source analysis,
+  and an analysis summary.
+- Added `.gitkeep` placeholders for generated-artifact directories such as
+  `data/metadata/`, `models/`, and `src/viriditas/data/metadata/`.
+
+### Changed
+
+- Added progress logging to the dataset index builder runner.
+- Removed dataset caching from the plant training input pipeline to reduce memory
+  pressure during Kaggle training.
+- Refined `.gitignore` so generated metadata, model files, analysis outputs, caches,
+  logs, and temporary files stay out of git while the required directory structure
+  remains available.
+
+### Removed
+
+- Removed tracked generated training/metadata artifacts from the repository in favor
+  of keeping only placeholder directories. Local generated model files still exist
+  under `models/.v01/`, but are intentionally ignored by git.
+
+### Known Follow-Ups
+
+- `notebooks/03_model_analysis.py` needs cleanup before being treated as reliable:
+  the local metadata fallback points at `src/viriditas/data/metadata`, the
+  misclassified-sample count constant is undefined, and the dataset accuracy plot
+  uses percentage values with a 0-1 x-axis limit.
+- `src/agriai/` has been reintroduced as a tracked legacy package even though
+  `src/viriditas/` is the active namespace; remove or reconcile it.
+- The notebook placeholders for `02_train_plant_model.ipynb` and
+  `03_model_analysis.ipynb` are still empty.
+
 ## 2026-07-11
 
 ### Fixed

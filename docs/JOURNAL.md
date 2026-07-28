@@ -2,6 +2,85 @@
 
 This journal records the engineering history, decisions, run results, blockers, and resume notes for VIRIDITAS. `PROJECT_PLAN.md` remains the source of truth for architecture; this file is the chronological working memory.
 
+## 2026-07-19
+
+### Session Goal
+
+Inspect the recent repository changes and bring `TODO.md`, `CHANGELOG.md`,
+`PROJECT_PLAN.md`, and this journal back in sync.
+
+### Repository State Checked
+
+`git status --short` was clean at the start of the documentation pass. The latest
+commits on `main` / `origin/main` were:
+
+```text
+0ceb901 Refactor project structure and ignore generated artifacts
+d3d4030 Remove dataset caching to improve memory usage during training
+b88adb6 Remove dataset caching to improve memory usage during training
+508f60a Remove dataset caching to improve memory usage during training
+25855b5 Improve plant training pipeline with augmentation and early stopping
+7fc2e15 Enhance dataset indexing: add progress logging during dataset scanning
+75215e1 Enhance dataset indexing: add progress logging during dataset scanning
+5ff8086 Add initial Jupyter notebook and Python script for training plant model
+```
+
+The docs were still describing the 2026-07-11 state, where preprocessing was complete
+and plant training was only the next milestone. The codebase has moved past that.
+
+### Changes Observed
+
+- `notebooks/02_train_plant_model.py` now exists as the plant identification training
+  runner. It uses EfficientNetV2B0, ImageNet weights, class weights, random
+  augmentation, a frozen-base phase, fine-tuning, checkpointing, early stopping, and
+  writes model/history outputs.
+- Local model artifacts exist under `models/.v01/`, including
+  `best_plant_model.keras` and `plant_id_model.keras`; this folder is ignored by git.
+- `notebooks/03_model_analysis.py` now exists and is intended to generate prediction
+  results, top-k accuracy, a confusion matrix, classification reports, per-class
+  accuracy, confidence analysis, misclassified sample grids, dataset-source analysis,
+  and an executive summary.
+- The training pipeline had dataset caching removed to reduce memory usage during
+  training.
+- The dataset index builder runner gained progress logging.
+- `.gitignore` now ignores generated metadata, model artifacts, analysis outputs,
+  logs, caches, and temporary files, while keeping placeholder directories with
+  `.gitkeep`.
+
+### Issues Captured For Follow-Up
+
+- `notebooks/03_model_analysis.py` currently points local metadata fallback at
+  `src/viriditas/data/metadata`, while the current root metadata placeholder is
+  `data/metadata`. This should be clarified or fixed before analysis is trusted.
+- `notebooks/03_model_analysis.py` references
+  `NUM_MISCLASSIFIED_SAMPLES_PER_CLASS`, but that constant is not defined.
+- `plot_dataset_accuracy()` multiplies accuracy by 100, but uses `plt.xlim(0, 1)`,
+  so the dataset-source accuracy chart will be scaled incorrectly.
+- `src/agriai/` has been reintroduced as a tracked legacy package even though
+  `src/viriditas/` is the active namespace. This should be removed or reconciled.
+- `02_train_plant_model.ipynb` and `03_model_analysis.ipynb` are empty placeholders.
+- `plant_id_training_history.json` is not currently tracked after the generated
+  artifact cleanup, so baseline metrics need to be recovered from local outputs or
+  rerun and recorded in docs.
+
+### Documentation Updated
+
+Updated:
+
+- `TODO.md`
+- `CHANGELOG.md`
+- `PROJECT_PLAN.md`
+- `docs/JOURNAL.md`
+- `README.md`
+
+### Current Resume Point
+
+Preprocessing remains complete. Plant identification training has begun and local
+model artifacts exist, but the baseline is not fully documented until the history and
+analysis metrics are recovered or rerun. The next engineering step is to fix
+`03_model_analysis.py`, run it against the current plant model, and record the
+baseline metrics before moving on to disease classification.
+
 ## 2026-07-11
 
 ### Session Goal

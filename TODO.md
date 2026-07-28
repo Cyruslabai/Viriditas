@@ -1,6 +1,6 @@
 # VIRIDITAS TODO
 
-Last updated: 2026-07-11
+Last updated: 2026-07-19
 
 ## Documentation
 
@@ -50,9 +50,10 @@ Last updated: 2026-07-11
 - [x] Populate `duplicate_group_id` in `master_dataset.csv` for real
 - [x] Resolve cross-split duplicate leakage (6,176 images / 3,057 groups -> 0)
 - [x] Add hash cache to speed up repeat dedup runs
-- [x] Commit hash cache to GitHub with a `.gitignore` exception
+- [x] Stop tracking generated metadata/hash-cache artifacts in git; keep metadata folders via `.gitkeep`
 - [x] Fix `_replace_split` in `splits.py` to use `dataclasses.replace` (avoid silently dropping future fields)
 - [ ] Decide handling for the 7 remaining unlabeled apple images (drop vs. keep as tiny Unknown class)
+- [ ] Decide whether the dedup hash cache needs a non-git persistence path, such as a Kaggle Dataset artifact, if rebuild speed becomes painful again
 
 ## Testing
 
@@ -66,15 +67,26 @@ Last updated: 2026-07-11
 - [ ] Add tests for `deduplicate_records()` and cross-split resolution
 - [ ] Add tests for the hash cache (cache hit/miss behavior)
 - [ ] Add tests for metadata schema validation
+- [ ] Add a smoke/static check for `notebooks/03_model_analysis.py`
 
 ## Training
 
-- [ ] Create `02_train_plant_model.ipynb`
-- [ ] Train baseline plant identification model
+- [x] Create `notebooks/02_train_plant_model.py`
+- [ ] Populate or remove the empty `notebooks/02_train_plant_model.ipynb` placeholder
+- [x] Train and save local plant identification baseline artifacts
+- [x] Add EfficientNetV2B0 transfer-learning baseline
+- [x] Add data augmentation, class weights, checkpointing, and early stopping
+- [x] Remove `tf.data` caching from training to reduce memory pressure
+- [x] Save the plant label map used by training
+- [ ] Recover or rerun the plant training history and record baseline metrics in docs
+- [x] Create `notebooks/03_model_analysis.py`
+- [ ] Fix analysis script issues before relying on it: local metadata path, undefined misclassified-sample count, and dataset-accuracy plot axis
+- [ ] Run plant model analysis and save summary metrics
 - [ ] Create `03_train_disease_model.ipynb`
 - [ ] Train baseline disease classification model
-- [ ] Save label maps with trained models
+- [ ] Save disease label maps with trained models
 - [ ] Track metrics and confusion matrices
+- [ ] Remove or reconcile the reintroduced legacy `src/agriai/` package so `src/viriditas/` remains the only active package namespace
 
 ## Inference
 

@@ -1,6 +1,6 @@
 # VIRIDITAS Project Plan
 
-Last updated: 2026-07-11
+Last updated: 2026-07-19
 
 ## Project Vision
 
@@ -56,10 +56,13 @@ The repository currently contains an earlier Flask prototype:
 - `src/viriditas/data/`: Metadata-based preprocessing package
 - `scripts/build_dataset_index.py`: Dataset index builder CLI
 - `notebooks/01_dataset_index_builder.ipynb` / `.py`: Kaggle preprocessing notebook and runner
-- `data/metadata/`: Generated metadata CSVs plus the committed `hash_cache.csv` dedup cache
+- `notebooks/02_train_plant_model.py`: Kaggle-friendly plant identification training runner
+- `notebooks/03_model_analysis.py`: Plant model evaluation and error-analysis runner
+- `data/metadata/`: Generated metadata directory placeholder; generated CSV/cache artifacts are ignored
+- `models/`: Generated model directory placeholder; local model artifacts are ignored
 - `tests/`: Unit tests for preprocessing behavior
 
-The Flask prototype is useful but does not yet match the planned scalable VIRIDITAS inference architecture. The preprocessing layer is now the first implemented part of the new VIRIDITAS architecture, and is now considered feature-complete and validated for the initial 13 datasets.
+The Flask prototype is useful but does not yet match the planned scalable VIRIDITAS inference architecture. The preprocessing layer is considered feature-complete and validated for the initial 13 datasets. The plant identification training stage has started and local model artifacts exist, but the training metrics need to be recovered or rerun and recorded before the baseline is considered fully documented.
 
 ## Planned Folder Structure
 
@@ -67,12 +70,15 @@ The Flask prototype is useful but does not yet match the planned scalable VIRIDI
 VIRIDITAS/
 |-- data/
 |   |-- raw/                       External datasets, usually ignored by git
-|   |-- metadata/                  Generated dataset indexes, split CSVs, and hash_cache.csv
+|   |-- metadata/                  Generated dataset indexes, split CSVs, and hash cache; ignored except .gitkeep
 |-- notebooks/
 |   |-- 01_dataset_index_builder.ipynb
 |   |-- 01_dataset_index_builder.py
 |   |-- 02_train_plant_model.ipynb
+|   |-- 02_train_plant_model.py
 |   |-- 03_train_disease_model.ipynb
+|   |-- 03_model_analysis.ipynb
+|   |-- 03_model_analysis.py
 |   |-- 04_inference.ipynb
 |-- scripts/
 |   |-- build_dataset_index.py
@@ -82,6 +88,7 @@ VIRIDITAS/
 |       |-- models/                Training and model utilities
 |       |-- inference/             End-to-end prediction pipeline
 |       |-- recommendations/       Treatment and guidance generation
+|-- models/                        Generated model artifacts; ignored except .gitkeep
 |-- tests/                         Unit and integration tests
 |-- docs/
 |   |-- JOURNAL.md                 Chronological project memory
@@ -204,6 +211,13 @@ Initial recommendation:
 - Start with EfficientNetV2B0, MobileNetV3, or ConvNeXt-Tiny depending on device target.
 - Keep the plant model and disease model separate at first for cleaner debugging.
 - Later evaluate a multi-task model only after the dataset is stable.
+
+Current plant trainer:
+
+- Uses EfficientNetV2B0 with ImageNet weights.
+- Runs a frozen-base phase followed by fine-tuning from layer 100 onward.
+- Uses image size `224 x 224`, batch size 32, class weights, random flip/rotation/zoom/contrast augmentation, checkpointing, and early stopping.
+- Saves model artifacts under `models/` locally or `/kaggle/working/models` on Kaggle. Generated artifacts are ignored by git.
 
 ## Design Decisions
 
@@ -346,38 +360,54 @@ Completed:
   `duplicate_group_id` on every row for the first time
 - Resolved 6,176 cross-split leaked images (3,057 duplicate groups) down to 0, dataset
   now 197,975 images
-- Added and committed a hash cache to speed up future rebuilds
+- Added a hash cache to speed up future rebuilds
+- Added progress logging to the Kaggle dataset index builder runner
+- Created the plant identification training runner
+- Added augmentation, class weights, checkpointing, early stopping, and fine-tuning to the plant trainer
+- Removed dataset caching from the training pipeline to reduce memory pressure
+- Saved local plant baseline model artifacts under `models/.v01/`
+- Added a plant model analysis runner
+- Refactored generated artifacts out of git and preserved only placeholder directories
 
 In progress:
 
-- None — preprocessing/label-quality/duplicate-leakage milestones are complete
+- Stabilize the plant-training handoff: document metrics, fix analysis-script issues, and clean up project structure drift
 
 Not started:
 
-- Plant identification model training
 - Disease classification model training
 - Recommendation engine
 
 ## Current Task
 
-Start model training. Preprocessing is validated and stable: 197,975 images, 0 bad
-plant labels, 7 residual genuinely-unlabeled images (apple dataset, low priority),
-0 cross-split duplicate leakage, all wired permanently into the pipeline (not manual
-patches). Next concrete steps, in order:
+Stabilize the plant identification baseline and analysis workflow. Preprocessing is
+validated and stable: 197,975 images, 0 bad plant labels, 7 residual genuinely
+unlabeled images (apple dataset, low priority), 0 cross-split duplicate leakage, all
+wired permanently into the pipeline. Plant training has begun and local model
+artifacts exist, but the metrics and analysis outputs are not yet documented.
 
-1. Decide handling for the 7 remaining unlabeled apple images (drop from
-   `master_dataset.csv` before training, or leave as a tiny `Unknown` class — dropping
-   is the simpler and lower-risk default).
-2. Create `notebooks/02_train_plant_model.ipynb`.
-3. Train a baseline plant identification model (see Model Architecture Direction above
-   for the recommended starting architectures).
+Next concrete steps, in order:
+
+1. Fix `notebooks/03_model_analysis.py` before relying on it: local metadata fallback
+   should match the current generated metadata location, `NUM_MISCLASSIFIED_SAMPLES_PER_CLASS`
+   needs a value, and the dataset accuracy plot should use either 0-1 accuracy values
+   or a 0-100 x-axis.
+2. Recover or rerun `plant_id_training_history.json` and record the plant baseline
+   metrics in this plan, the journal, and the changelog.
+3. Decide whether to keep or remove the empty notebook placeholders
+   (`02_train_plant_model.ipynb`, `03_model_analysis.ipynb`).
+4. Remove or reconcile the reintroduced legacy `src/agriai/` package so the active
+   namespace remains `src/viriditas/`.
+5. Decide handling for the 7 remaining unlabeled apple images before disease-model
+   training.
+6. Start the disease classification training runner/notebook.
 
 Resume guide:
 
 - To rebuild the dataset index from a fresh Kaggle session: pull the repo via the
   GitHub API cell, `%cd` into it, then `%run notebooks/01_dataset_index_builder.py`.
   This now runs label parsing, split assignment, and duplicate resolution in one pass
-  and reuses `data/metadata/hash_cache.csv` for already-hashed files.
+  and can reuse `data/metadata/hash_cache.csv` when that generated cache is present.
 - Use `docs/KAGGLE_RUNBOOK.md` to redownload the repo and rerun preprocessing in Kaggle.
 - Use `docs/JOURNAL.md` for the chronological record of what happened and why.
 
@@ -440,15 +470,16 @@ Decision: Use a small Python package under `src/viriditas/` and keep notebooks t
 
 ## Next Tasks
 
-1. Decide handling for the 7 remaining unlabeled apple images.
-2. Create `02_train_plant_model.ipynb`.
-3. Train baseline plant identification model.
-4. Create `03_train_disease_model.ipynb`.
-5. Train baseline disease classification model.
-6. Add unit tests for the filename-based label fallback and non-informative folder
+1. Fix and run `03_model_analysis.py` against the current plant baseline.
+2. Recover or rerun plant training history and record baseline metrics.
+3. Remove/reconcile the reintroduced `src/agriai/` legacy package.
+4. Decide handling for the 7 remaining unlabeled apple images.
+5. Create `03_train_disease_model.ipynb` or `.py`.
+6. Train baseline disease classification model.
+7. Add unit tests for the filename-based label fallback and non-informative folder
    stripping (both currently untested despite being load-bearing for the strawberry
    dataset's 3,243 images).
-7. Add unit tests for `deduplicate_records()` and the hash cache.
+8. Add unit tests for `deduplicate_records()` and the hash cache.
 
 ## Future Roadmap
 
