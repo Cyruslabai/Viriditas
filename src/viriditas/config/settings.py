@@ -85,22 +85,6 @@ class TrainingConfig:
 class DatasetConfig:
     """Dataset configuration."""
 
-    # Kaggle dataset roots
-    ROOTS: ClassVar[list[str]] = [
-        "/kaggle/input/datasets/rizwan123456789/potato-disease-leaf-datasetpld",
-        "/kaggle/input/datasets/showravdhar/apple-disease-dataset",
-        "/kaggle/input/datasets/shuvokumarbasak2030/cherry-leaf-diseases-plant-village-augmented-data",
-        "/kaggle/input/datasets/smaranjitghose/corn-or-maize-leaf-disease-dataset",
-        "/kaggle/input/datasets/rm1000/grape-disease-dataset-original",
-        "/kaggle/input/datasets/zunorain/pea-plant-dataset",
-        "/kaggle/input/datasets/shuvokumarbasak2030/peach-leaf-diseases-plant-village-augmented-data",
-        "/kaggle/input/datasets/shuvokumarbasak4004/orange-leaf-disease-dataset",
-        "/kaggle/input/datasets/ashishmotwani/tomato",
-        "/kaggle/input/datasets/usmanafzaal/strawberry-disease-detection-dataset",
-        "/kaggle/input/datasets/sivm205/soybean-diseased-leaf-dataset",
-        "/kaggle/input/datasets/tahmidmir/pumpkin-leaf-diseases-dataset-from-bangladesh",
-        "/kaggle/input/datasets/shuvokumarbasak2030/pepper-leaf-diseases-plant-village-augmented-data",
-    ]
     PRESERVE_SOURCE_SPLITS: bool = True
     DEDUP_PREFER_SPLIT: str = "train"
 

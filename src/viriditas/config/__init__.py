@@ -13,7 +13,7 @@ Usage:
     # Get constants
     print(image_config.SIZE)
     print(training_config.FROZEN_EPOCHS)
-    print(dataset_config.ROOTS)
+    print(dataset_config.PRESERVE_SOURCE_SPLITS)
 """
 
 from viriditas.config.environment import Environment, detect_environment
