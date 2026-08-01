@@ -22,24 +22,19 @@ from sklearn.metrics import classification_report, confusion_matrix
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-METADATA_DIR = (
-    Path("/kaggle/working/data/metadata")
-    if Path("/kaggle").exists()
-    else PROJECT_ROOT / "src" / "viriditas" / "data" / "metadata"
-)
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
+from viriditas.config import paths, image_config
+from viriditas.preprocessing import ImagePreprocessor
+preprocessor = ImagePreprocessor()
+BATCH_SIZE = image_config.BATCH_SIZE
 
-MODEL_DIR = (
-    Path("/kaggle/working/models")
-    if Path("/kaggle").exists()
-    else PROJECT_ROOT / "models" / ".v01"
-)
-
+METADATA_DIR = paths.metadata_dir
+MODEL_DIR = paths.models_dir
 OUTPUT_DIR = MODEL_DIR / "analysis"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-MODEL_PATH = MODEL_DIR / "best_plant_model.keras"
-IMAGE_SIZE = (224, 224)
-BATCH_SIZE = 32
+MODEL_PATH = paths.resolve_model_path("best_plant_model.keras")
 
 def load_test_data() -> tuple[pd.DataFrame, dict[str, int]]:
     df = pd.read_csv(METADATA_DIR / "plant_id_dataset.csv")
@@ -57,12 +52,7 @@ def load_test_data() -> tuple[pd.DataFrame, dict[str, int]]:
 
 
 def _load_image(path: str) -> tf.Tensor:
-    image = tf.io.read_file(path)
-    image = tf.image.decode_image(image, channels=3, expand_animations=False)
-    image.set_shape([None, None, 3])
-    image = tf.image.resize(image, IMAGE_SIZE)
-    image = tf.keras.applications.efficientnet_v2.preprocess_input(image)
-    return image
+    return preprocessor.load_from_path(path)
 
 
 def make_test_dataset(test_df: pd.DataFrame, label_map: dict[str, int]) -> tf.data.Dataset:

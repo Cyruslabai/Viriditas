@@ -1,3 +1,73 @@
+# CHANGELOG.md
+
+# Changelog
+
+## 2026-08-01
+
+### Added
+
+- Introduced `src/viriditas/config/` as the single configuration system for the
+  project: `settings.py`, `environment.py`, and an `__init__.py` exporting
+  ready-to-use configuration objects (`paths`, `image_config`, `training_config`,
+  `dataset_config`).
+- Added automatic environment detection (Local / Kaggle / Google Colab). The
+  detected environment now determines metadata paths, model paths, and output
+  directories instead of hardcoded per-notebook paths.
+- Added a centralized model-input preprocessing implementation inside
+  `src/viriditas/` (image loading, resizing, normalization, EfficientNet-specific
+  preprocessing) intended to be shared by every future consumer: training,
+  evaluation, inference, FastAPI, and Flutter.
+- Began production package restructuring under `src/viriditas/`:
+  `config/`, `data/`, `preprocessing/`, `training/`, `inference/`, `evaluation/`,
+  `models/`, `utils/`.
+- Ran architectural smoke tests after the configuration and preprocessing
+  refactor: import validation, configuration validation, and centralized
+  preprocessing validation all passed. Two environment-specific failures were
+  observed (missing `pandas` in an isolated sandbox environment, and a missing
+  local model artifact) and confirmed to be environmental setup issues rather
+  than architectural regressions. An import conflict encountered during testing
+  was also resolved.
+
+### Changed
+
+- Replaced direct configuration constants (`IMAGE_SIZE`, `BATCH_SIZE`,
+  `MODEL_DIR`, `OUTPUT_DIR`, `METADATA_DIR`) with configuration objects
+  (`image_config.SIZE`, `image_config.BATCH_SIZE`, `paths.models_dir`,
+  `paths.metadata_dir`, `paths.resolve_model_path()`, etc.) across the codebase.
+- Adopted "thin notebook" as an explicit engineering principle: notebooks may
+  only load configuration, call reusable functions from `src/viriditas/`, and
+  visualize results. Business logic is no longer permitted to live directly in
+  notebook cells.
+- Reframed VIRIDITAS's long-term architecture as a reusable AI SDK: the same
+  core modules (config, preprocessing, training, inference) are intended to be
+  consumed by Kaggle notebooks, a future FastAPI backend, a future Flutter
+  client, CLI utilities, and future LLM orchestration, without duplicating
+  business logic per consumer.
+- Narrowed Version 1 scope to software only. Plant identification, disease
+  detection, the recommendation engine, the FastAPI backend, and the Flutter
+  client are in scope for V1. Arduino, ESP32, IoT sensors, weather stations, and
+  other embedded/hardware integrations are moved to an archived / future
+  possibilities category and are explicitly out of scope for V1.
+
+### Planned
+
+- Lazy model loading for the inference package: models should be initialized on
+  first use rather than loaded at module import time, to improve startup time,
+  ease testing, and integrate cleanly with FastAPI's request lifecycle. Not yet
+  implemented; tracked as an in-progress architectural decision.
+
+### Reason
+
+The dataset pipeline and Kaggle-notebook-based training workflow (see the
+2026-07-04 through 2026-07-19 entries below) successfully proved out the core
+preprocessing and baseline-training approach. As the project grew, configuration
+constants and preprocessing logic were duplicated across notebooks, which made
+testing, reuse across future consumers (FastAPI, Flutter, CLI, LLM
+orchestration), and long-term maintenance increasingly difficult. This refactor
+moves VIRIDITAS from a notebook-centric research workflow toward a production
+Python package with centralized configuration and preprocessing, without
+discarding any of the dataset-quality engineering work already completed.
+
 ## 2026-07-19
 
 ### Added
@@ -34,7 +104,9 @@
   misclassified-sample count constant is undefined, and the dataset accuracy plot
   uses percentage values with a 0-1 x-axis limit.
 - `src/agriai/` has been reintroduced as a tracked legacy package even though
-  `src/viriditas/` is the active namespace; remove or reconcile it.
+  `src/viriditas/` is the active namespace; remove or reconcile it. (Note, added
+  2026-08-01: this legacy package is historical only and must not be treated as
+  an active part of the architecture going forward — see the 2026-08-01 entry.)
 - The notebook placeholders for `02_train_plant_model.ipynb` and
   `03_model_analysis.ipynb` are still empty.
 
@@ -63,9 +135,7 @@
   one split (train/val/test) by keeping a single copy — preferring the `train` copy —
   and dropping the rest, eliminating train/test leakage from exact-duplicate images.
 - Added a hash cache (`data/metadata/hash_cache.csv`, keyed by file size + modification
-  time) so repeat runs skip re-hashing unchanged files. Committed to the repo with a
-  `.gitignore` exception (`/data/*` plus `!/data/metadata/`) so it survives fresh
-  Kaggle sessions instead of being rebuilt from scratch every time.
+  time) so repeat runs skip re-hashing unchanged files.
 - Wired `deduplicate_records()` into `notebooks/01_dataset_index_builder.py`, running
   immediately after `assign_splits()` and before any CSV is written, so
   `master_dataset.csv` is leak-free and duplicate-tagged on every build going forward.

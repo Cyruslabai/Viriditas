@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
+from viriditas.preprocessing import ImagePreprocessor
 import tkinter as tk
 from tkinter import filedialog
 
@@ -36,10 +37,9 @@ root = tk.Tk()
 root.withdraw()
 file_path = filedialog.askopenfilename(title="Select Leaf Image")
 
-# Load image
-img = image.load_img(file_path, target_size=(224,224))
-img_array = image.img_to_array(img)
-img_array = np.expand_dims(img_array, axis=0) / 255.0
+# Load image using centralized preprocessing
+preprocessor = ImagePreprocessor()
+img_array = preprocessor.preprocess_path_to_batch(file_path)
 
 # Predict
 pred = model.predict(img_array)

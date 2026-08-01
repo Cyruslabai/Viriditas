@@ -14,12 +14,15 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.utils.class_weight import compute_class_weight
 
-METADATA_DIR = Path("/kaggle/working/data/metadata") if Path("/kaggle").exists() else Path("data/metadata")
-OUTPUT_DIR = Path("/kaggle/working/models") if Path("/kaggle").exists() else Path("models")
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
+from viriditas.config import paths, image_config
+from viriditas.preprocessing import ImagePreprocessor
+preprocessor = ImagePreprocessor()
+BATCH_SIZE = image_config.BATCH_SIZE
+METADATA_DIR = paths.metadata_dir
+OUTPUT_DIR = paths.models_dir
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-IMAGE_SIZE = (224, 224)
-BATCH_SIZE = 32
 FROZEN_EPOCHS = 5
 FINE_TUNE_EPOCHS = 5
 FINE_TUNE_AT_LAYER = 100  # unfreeze layers from this index onward during fine-tuning
@@ -43,15 +46,7 @@ def make_dataset(df: pd.DataFrame, label_map: dict[str, int], split: str, shuffl
     labels = [label_map[label] for label in subset["task_plant_label"]]
 
     def _load(path, label):
-        image = tf.io.read_file(path)
-        image = tf.image.decode_image(
-            image,
-            channels=3,
-            expand_animations=False,
-        )
-        image.set_shape([None, None, 3])
-        image = tf.image.resize(image, IMAGE_SIZE)
-        image = tf.keras.applications.efficientnet_v2.preprocess_input(image)
+        image = preprocessor.load_from_path(path)
         return image, label
 
     ds = tf.data.Dataset.from_tensor_slices((paths, labels))
@@ -66,7 +61,7 @@ def build_model(num_classes: int) -> tf.keras.Model:
     base = tf.keras.applications.EfficientNetV2B0(
         include_top=False,
         weights="imagenet",
-        input_shape=IMAGE_SIZE + (3,),
+        input_shape=image_config.SIZE + (3,),
         pooling="avg",
     )
 
@@ -79,7 +74,7 @@ def build_model(num_classes: int) -> tf.keras.Model:
         tf.keras.layers.RandomContrast(0.10),
     ], name="data_augmentation")
 
-    inputs = tf.keras.Input(shape=IMAGE_SIZE + (3,))
+    inputs = tf.keras.Input(shape=image_config.SIZE + (3,))
 
     x = data_augmentation(inputs)
     x = base(x, training=False)

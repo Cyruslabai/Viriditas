@@ -1,12 +1,12 @@
 # VIRIDITAS
 
-VIRIDITAS is an AI-powered plant health system designed to identify a plant from a leaf image, diagnose plant-specific diseases, and eventually provide treatment, fertilizer, prevention, weather-aware, and local AI assistant guidance.
+VIRIDITAS is an AI software platform focused on plant identification, disease detection, and AI-powered recommendations. The project provides robust data engineering, training, evaluation, and an extensible recommendation engine for agricultural guidance.
 
 The current engineering milestone is stabilizing the first plant identification baseline after completing the metadata-driven dataset pipeline. Instead of copying images into new folders, VIRIDITAS indexes existing Kaggle datasets in place and creates standardized CSV metadata for training plant identification and disease classification models.
 
 ## Current Status
 
-This repository contains an earlier Flask prototype for plant disease prediction and sensor-based irrigation monitoring plus the newer VIRIDITAS data and training pipeline. The project is being refactored into separate dataset indexing, model training, analysis, inference, and recommendation components.
+This repository contains an earlier Flask prototype for plant disease prediction and the newer VIRIDITAS data and training pipeline. The project is being refactored into separate dataset indexing, model training, analysis, inference, and recommendation components. The hardware- and sensor-focused experiments have been archived and are out-of-scope for Version 1.
 
 Latest checkpoint:
 
@@ -26,9 +26,9 @@ Latest checkpoint:
 - Local inference on consumer devices
 - AI-generated treatment recommendations
 - Fertilizer and prevention guidance
-- Weather-aware farming advice
 - Offline assistant and future voice interaction
-- IoT sensor integration for irrigation context
+- LLM-powered explanations and agricultural guidance
+- FastAPI backend and Flutter mobile client (planned)
 
 ## Target Architecture
 
@@ -68,7 +68,7 @@ This avoids duplicate image storage and makes it possible to add new datasets wi
 VIRIDITAS/
 |-- app.py                         Existing Flask prototype
 |-- index.html                     Existing web dashboard prototype
-|-- arduino_sensor_sender.ino      Existing ESP32 sensor sender sketch
+|-- arduino_sensor_sender.ino      (archived hardware experiment)
 |-- requirements.txt               Python dependencies
 |-- data/
 |   |-- raw/                       External datasets, usually not committed
@@ -161,21 +161,11 @@ The original prototype documentation is preserved below.
 
 # Plant Disease Identifier with Sensor-Based Irrigation Monitoring
 
-This project is a smart agriculture web application that combines plant disease detection with real-time environmental monitoring. It allows a user to upload a leaf image for disease prediction while also receiving live soil moisture, temperature, and humidity readings from connected sensors. Based on the sensor values, the system generates simple irrigation recommendations to support better plant care.
+This repository contains a legacy prototype (archived) that demonstrated leaf-image disease prediction and a simple dashboard. Hardware- and sensor-related features from the prototype are archived and are not part of the Version 1 product.
 
 ## Overview
 
-The application has two core parts:
-
-1. A deep learning image classification pipeline that predicts plant disease from a leaf image.
-2. An IoT monitoring workflow that receives sensor readings from an ESP32-CAM with a soil moisture sensor and a DHT11 sensor.
-
-The web interface brings both parts together in a single dashboard so the user can:
-
-- upload a leaf image
-- view disease prediction results and confidence
-- monitor soil moisture, temperature, and humidity
-- receive automatic irrigation advice
+The prototype demonstrated a deep learning image classification pipeline for leaf images and a simple dashboard. Hardware and sensor-related functionality is archived; the core product focus is on model-driven inference and recommendation.
 
 ## Key Features
 
@@ -192,11 +182,11 @@ The web interface brings both parts together in a single dashboard so the user c
 ### Backend
 
 - Python
-- Flask
-- Flask-CORS
+- FastAPI (target for production service)
 - TensorFlow / Keras
 - NumPy
 - Pillow
+- Docker (deployment)
 
 ### Frontend
 
@@ -215,7 +205,7 @@ The web interface brings both parts together in a single dashboard so the user c
 ### Disease Detection Flow
 
 1. The user uploads a leaf image through the web interface.
-2. The Flask backend preprocesses the image to `224 x 224`.
+2. The service backend (FastAPI in the target architecture) preprocesses the image to `224 x 224`.
 3. The trained TensorFlow model predicts the disease class.
 4. The application returns the plant name, predicted disease, confidence score, and top 3 predictions.
 
@@ -246,7 +236,7 @@ The disease classes currently configured in the application include crops such a
 Plant-disease-identifier/
 |-- app.py                        Flask backend and prediction API
 |-- index.html                    Frontend dashboard
-|-- arduino_sensor_sender.ino     ESP32-CAM sensor sender sketch
+|-- arduino_sensor_sender.ino     (archived hardware experiment)
 |-- test.py                       Local image testing script
 |-- requirements.txt              Python dependencies
 |-- images/                       Training graph images
@@ -278,54 +268,21 @@ plant_disease_model_finetuned.h5
 
 The application will not start correctly unless this file is present.
 
-### 4. Run the Flask application
+### 4. Running the prototype service (legacy)
+
+The repository contains a legacy Flask prototype (`app.py`) used during early exploration. It is retained for historical reference. The target production service will be implemented with FastAPI.
+
+To run the prototype locally (not required for V1 work):
 
 ```bash
 python app.py
+# then open http://localhost:5000 in your browser
 ```
 
-The app runs on port `5000` and is configured to listen on the local network so that the ESP32-CAM can send sensor readings to it.
 
-### 5. Open the web app
+## Archived hardware experiments
 
-Open the following address in your browser:
-
-```text
-http://localhost:5000
-```
-
-## Sensor Setup
-
-### ESP32-CAM sketch
-
-The project includes the file:
-
-```text
-arduino_sensor_sender.ino
-```
-
-Before uploading it to the board, update:
-
-- `YOUR_WIFI_NAME`
-- `YOUR_WIFI_PASSWORD`
-- `YOUR_COMPUTER_IP`
-
-Example:
-
-```cpp
-const char* serverUrl = "http://192.168.1.5:5000/sensor-data";
-```
-
-### Sensor pins used in the sketch
-
-- `DHTPIN = 13`
-- `SOIL_PIN = 33`
-
-### Sensor update behavior
-
-- The ESP32-CAM sends readings every 10 seconds.
-- The web dashboard refreshes sensor data automatically every 5 seconds.
-
+Legacy hardware and sensor experiments (ESP32 sketches, Arduino prototypes, and simple dashboard integrations) are preserved in the repository for historical reference only. These experiments are intentionally archived and are out-of-scope for the Version 1 software platform. See `docs/JOURNAL.md` for notes and rationale.
 ## API Endpoints
 
 ### `POST /predict`
@@ -338,30 +295,9 @@ Accepts a leaf image file and returns:
 - healthy/diseased status
 - top 3 predictions
 
-### `GET /sensor-data`
+### Legacy sensor endpoints (archived)
 
-Returns the current sensor state, including:
-
-- soil moisture
-- temperature
-- humidity
-- soil status
-- climate status
-- irrigation level
-- irrigation advice
-
-### `POST /sensor-data`
-
-Accepts JSON sensor readings in the format:
-
-```json
-{
-  "soil_moisture": 55,
-  "temperature": 28.4,
-  "humidity": 62.1
-}
-```
-
+The repository previously exposed simple sensor endpoints for prototype experiments. These endpoints are part of archived hardware work and are not part of the Version 1 product. See `docs/JOURNAL.md` for details.
 ## Training Graphs
 
 Training graphs used in the project are stored in the `images/` folder.
@@ -373,7 +309,7 @@ Training graphs used in the project are stored in the `images/` folder.
 
 ## Educational Value
 
-This project demonstrates how artificial intelligence and IoT can work together in agriculture. It covers:
+This project demonstrates how artificial intelligence can be applied to plant identification and disease detection. It covers:
 
 - image preprocessing for deep learning
 - model inference with TensorFlow

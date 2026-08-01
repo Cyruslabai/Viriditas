@@ -1,14 +1,43 @@
+# PROJECT_PLAN.md
+
 # VIRIDITAS Project Plan
 
-Last updated: 2026-07-19
+Last updated: 2026-08-01
+
+Organization: Cyrus Labs AI
+Version: Pre-V1
 
 ## Project Vision
 
-VIRIDITAS is a local-first AI agricultural assistant. Its core mission is to identify plants from leaf images, diagnose plant-specific diseases, and provide practical treatment, fertilizer, prevention, and farming guidance. The long-term product direction includes offline inference, local AI explanations, weather-aware recommendations, voice interaction, desktop and mobile apps, and optional cloud synchronization.
+VIRIDITAS is Cyrus Labs AI's flagship AI software platform for agriculture. Its
+core mission is to identify plants from leaf images, diagnose plant-specific
+diseases, and provide practical treatment, fertilizer, and prevention guidance
+through an AI recommendation engine. VIRIDITAS is designed as a reusable AI SDK:
+the same core modules (configuration, preprocessing, training, inference) are
+intended to support multiple future consumers — a FastAPI backend, a Flutter
+mobile client, CLI utilities, Kaggle notebooks, and future LLM-powered
+agricultural assistant orchestration — without duplicating business logic per
+consumer.
+
+### Version 1 Scope (Software Only)
+
+Version 1 is explicitly software-only. In scope:
+
+- Plant identification
+- Disease detection (plant-specific disease classification)
+- AI recommendation engine
+- FastAPI backend
+- Flutter mobile application
+- Future LLM-powered agricultural assistant
+
+Arduino, ESP32, IoT sensors, weather stations, and other embedded/hardware
+integrations are **not** part of Version 1. They are retained only as archived
+ideas / future possibilities (see Section "Archived Ideas / Future
+Possibilities" below) and must not be treated as active architecture.
 
 ## Current Architecture
 
-The target system is split into independent layers:
+### 1. Model Pipeline (AI Layer)
 
 ```text
 Leaf Image
@@ -26,84 +55,118 @@ AI Recommendation Engine
 Treatment | Fertilizer | Prevention | Future AI Chat
 ```
 
-### Model 1: Plant Identification
+#### Model 1: Plant Identification
 
 - Input: Leaf image
 - Output: Plant species
 - Role: Identify the crop before disease diagnosis and future recommendations
+- Status: Baseline trained (EfficientNetV2B0 transfer learning)
 
-### Model 2: Disease Classification
+#### Model 2: Disease Classification
 
 - Input: Leaf image and plant context
 - Output: Disease label for that plant, including healthy classes
 - Role: Diagnose the plant-specific condition
+- Status: Not started
 
-### Recommendation Engine
+#### Recommendation Engine
 
-- Planned input: Plant, disease, confidence, image-derived signals, weather, user context, and sensor data
-- Planned output: Treatment steps, fertilizer suggestions, prevention guidance, and AI explanations
+- Planned input: Plant, disease, confidence, image-derived signals, user context
+- Planned output: Treatment steps, fertilizer suggestions, prevention guidance,
+  and AI explanations
+- Status: Not started
+
+### 2. Production Software Architecture (Engineering Layer)
+
+As of 2026-08-01, the project has moved from a notebook-centric research
+workflow toward a production Python package. The active and target package
+layout is:
+
+```text
+src/
+`-- viriditas/
+    |-- config/            Centralized configuration (settings, environment detection)
+    |-- data/               Scanners, parsers, label normalization, dedup (implemented)
+    |-- preprocessing/      Centralized image preprocessing (implemented)
+    |-- training/           Training package (in progress; logic currently still in notebooks/02_train_plant_model.py)
+    |-- inference/          Inference package (planned; not started)
+    |-- evaluation/         Evaluation package (planned; currently notebooks/03_model_analysis.py)
+    |-- models/             Model definitions / artifacts handling
+    `-- utils/              Shared utilities
+```
+
+`src/agriai/` is a **historical package only**. It was the original pre-rename
+codebase (see Design Decision, 2026-07-04) and was briefly and unintentionally
+reintroduced as a tracked legacy package around 2026-07-19 (see CHANGELOG,
+"Known Follow-Ups"). It is not part of the active architecture and is tracked
+for removal/reconciliation in `TODO.md`.
+
+## Engineering Principles
+
+### Thin Notebook Philosophy
+
+Notebooks are no longer the location of business logic. Business logic belongs
+inside `src/viriditas/`. Notebooks are responsible only for:
+
+- Loading configuration
+- Calling reusable functions from `src/viriditas/`
+- Orchestration (calling steps in the right order)
+- Visualizing results
+
+This keeps the codebase reusable by FastAPI, Flutter, CLI tools, unit tests, and
+future LLM orchestration, instead of locking logic inside a Kaggle-only
+notebook cell that nothing else can import.
+
+### SDK Vision
+
+VIRIDITAS's long-term architecture goal is to function as a reusable AI SDK.
+The same core modules should be usable by:
+
+- Kaggle notebooks (current primary training environment)
+- A future FastAPI backend
+- A future Flutter mobile application
+- CLI utilities
+- Future LLM orchestration
+
+without rewriting preprocessing or inference logic per consumer. This is the
+central reason configuration and preprocessing were centralized (see Design
+Decisions below) before extracting the training, inference, and evaluation
+packages.
 
 ## Current Repository State
 
-The repository currently contains an earlier Flask prototype:
+The repository contains:
 
-- `app.py`: Flask API for disease prediction and sensor data
-- `index.html`: Web dashboard
-- `arduino_sensor_sender.ino`: ESP32 sensor sender sketch
-- `test.py`: Local manual image prediction script
-- `requirements.txt`: Prototype dependencies
-- `images/`: Training graph images
-- `src/viriditas/data/`: Metadata-based preprocessing package
-- `scripts/build_dataset_index.py`: Dataset index builder CLI
-- `notebooks/01_dataset_index_builder.ipynb` / `.py`: Kaggle preprocessing notebook and runner
-- `notebooks/02_train_plant_model.py`: Kaggle-friendly plant identification training runner
-- `notebooks/03_model_analysis.py`: Plant model evaluation and error-analysis runner
-- `data/metadata/`: Generated metadata directory placeholder; generated CSV/cache artifacts are ignored
-- `models/`: Generated model directory placeholder; local model artifacts are ignored
-- `tests/`: Unit tests for preprocessing behavior
-
-The Flask prototype is useful but does not yet match the planned scalable VIRIDITAS inference architecture. The preprocessing layer is considered feature-complete and validated for the initial 13 datasets. The plant identification training stage has started and local model artifacts exist, but the training metrics need to be recovered or rerun and recorded before the baseline is considered fully documented.
-
-## Planned Folder Structure
-
-```text
-VIRIDITAS/
-|-- data/
-|   |-- raw/                       External datasets, usually ignored by git
-|   |-- metadata/                  Generated dataset indexes, split CSVs, and hash cache; ignored except .gitkeep
-|-- notebooks/
-|   |-- 01_dataset_index_builder.ipynb
-|   |-- 01_dataset_index_builder.py
-|   |-- 02_train_plant_model.ipynb
-|   |-- 02_train_plant_model.py
-|   |-- 03_train_disease_model.ipynb
-|   |-- 03_model_analysis.ipynb
-|   |-- 03_model_analysis.py
-|   |-- 04_inference.ipynb
-|-- scripts/
-|   |-- build_dataset_index.py
-|-- src/
-|   |-- viriditas/
-|       |-- data/                  Scanners, parsers, label normalization, dedup
-|       |-- models/                Training and model utilities
-|       |-- inference/             End-to-end prediction pipeline
-|       |-- recommendations/       Treatment and guidance generation
-|-- models/                        Generated model artifacts; ignored except .gitkeep
-|-- tests/                         Unit and integration tests
-|-- docs/
-|   |-- JOURNAL.md                 Chronological project memory
-|   |-- KAGGLE_RUNBOOK.md          Kaggle restart and rerun guide
-|-- PROJECT_PLAN.md
-|-- README.md
-|-- CHANGELOG.md
-|-- TODO.md
-```
+- `app.py`, `index.html`, `arduino_sensor_sender.ino`, `test.py`,
+  `requirements.txt`, `images/` — the earlier Flask-based prototype. This
+  prototype predates the current architecture and is not aligned with the
+  production package direction; its hardware/sensor pieces (`arduino_sensor_sender.ino`)
+  are explicitly archived, not part of V1 (see "Archived Ideas" below).
+- `src/viriditas/config/` — centralized configuration (`settings.py`,
+  `environment.py`), implemented.
+- `src/viriditas/data/` — metadata-based dataset preprocessing package,
+  implemented and validated (see Dataset Strategy below).
+- `src/viriditas/preprocessing/` — centralized model-input preprocessing
+  (image load, resize, normalize, EfficientNet-specific preprocessing),
+  implemented, intended as the single implementation shared by training,
+  evaluation, and future inference.
+- `scripts/build_dataset_index.py` — dataset index builder CLI.
+- `notebooks/01_dataset_index_builder.ipynb` / `.py` — dataset preprocessing,
+  implemented and validated.
+- `notebooks/02_train_plant_model.py` — plant identification training,
+  implemented; business logic not yet extracted into `src/viriditas/training/`.
+- `notebooks/03_model_analysis.py` — plant model evaluation, implemented with
+  known issues (see TODO.md, Training section).
+- `data/metadata/`, `models/` — generated-artifact directories, tracked via
+  `.gitkeep` only; generated contents are gitignored (see Design Decision,
+  2026-07-19 era cleanup).
+- `tests/` — unit tests for preprocessing behavior.
 
 ## Dataset Strategy
 
-The project will use metadata indexing instead of physically reorganizing images.
+The project uses metadata indexing instead of physically reorganizing images.
 
-### Old Approach
+### Old Approach (rejected)
 
 Images were copied into new folders such as:
 
@@ -115,12 +178,8 @@ validation/
 test/
 ```
 
-### Problem
-
-- Huge storage duplication
-- Kaggle disk space exhaustion
-- Slow preprocessing
-- Training layout tightly coupled to one folder structure
+Problems: huge storage duplication, Kaggle disk space exhaustion, slow
+preprocessing, and training layout tightly coupled to one folder structure.
 
 ### Current Approach
 
@@ -130,20 +189,17 @@ Keep original images in place and build CSV indexes:
 image_path, dataset_name, original_label, plant, disease, is_healthy, split
 ```
 
-Recommended metadata files:
+Metadata files produced by `notebooks/01_dataset_index_builder.py`:
 
-- `master_dataset.csv`: One row per image
-- `plant_id_dataset.csv`: Plant classification view
-- `disease_dataset.csv`: Disease classification view
-- `train.csv`, `val.csv`, `test.csv`: Split metadata
-- `label_map_plants.json`: Plant class mapping
-- `label_map_diseases.json`: Disease class mapping
-- `dataset_summary.json`: Quick counts by dataset, plant, disease, and split
-- `hash_cache.csv`: SHA-256 hash cache used for duplicate detection and dedup speedup
+- `master_dataset.csv` — one row per image
+- `plant_id_dataset.csv` — plant classification view
+- `disease_dataset.csv` — disease classification view
+- `train.csv`, `val.csv`, `test.csv` — split metadata
+- `label_map_plants.json`, `label_map_diseases.json` — class mappings
+- `dataset_summary.json` — quick counts by dataset, plant, disease, and split
+- `hash_cache.csv` — SHA-256 hash cache for duplicate detection and rebuild speed
 
-## Current Kaggle Dataset Roots
-
-The first preprocessing pass is configured for these Kaggle datasets:
+### Current Kaggle Dataset Roots
 
 ```text
 /kaggle/input/datasets/rizwan123456789/potato-disease-leaf-datasetpld
@@ -161,23 +217,22 @@ The first preprocessing pass is configured for these Kaggle datasets:
 /kaggle/input/datasets/shuvokumarbasak2030/pepper-leaf-diseases-plant-village-augmented-data
 ```
 
-## Dataset Format Detection
+### Dataset Format Detection
 
-The index builder should support:
+The index builder supports:
 
 - Flat class folders
 - Existing `train`, `valid`, `validation`, and `test` folders
 - Nested plant and disease folders
 - PlantVillage-style labels such as `Tomato___Early_blight`
 - Dataset-specific label naming variations
-- Flat split folders with no class subfolder, where the label is encoded in the filename
-  (e.g. `test/angular_leafspot351.jpg`)
-- Nested non-informative container folders (e.g. `Test Disease Severity Level/Level 1/`)
-  that must be stripped before falling back to filename-based labels
+- Flat split folders with no class subfolder, where the label is encoded in the
+  filename (e.g. `test/angular_leafspot351.jpg`)
+- Nested non-informative container folders (e.g.
+  `Test Disease Severity Level/Level 1/`) that must be stripped before falling
+  back to filename-based labels
 
-## Canonical Metadata Schema
-
-Current schema (implemented and populated end to end as of 2026-07-11):
+### Canonical Metadata Schema
 
 ```text
 image_path
@@ -197,223 +252,265 @@ duplicate_group_id
 split
 ```
 
-`image_path` should be absolute or dataset-root-relative depending on notebook portability needs. For Kaggle notebooks, root-relative paths are usually safer.
-
-`duplicate_group_id` is the first 16 hex characters of each image's SHA-256 hash. Every
-row has one, whether or not it is part of a duplicate group, so duplicate groups can be
-inspected directly from `master_dataset.csv` without rerunning detection.
+`duplicate_group_id` is the first 16 hex characters of each image's SHA-256
+hash. Every row has one, whether or not it is part of a duplicate group, so
+duplicate groups can be inspected directly from `master_dataset.csv`.
 
 ## Model Architecture Direction
 
-Initial recommendation:
-
 - Use transfer learning for both models.
-- Start with EfficientNetV2B0, MobileNetV3, or ConvNeXt-Tiny depending on device target.
-- Keep the plant model and disease model separate at first for cleaner debugging.
-- Later evaluate a multi-task model only after the dataset is stable.
-
-Current plant trainer:
-
-- Uses EfficientNetV2B0 with ImageNet weights.
-- Runs a frozen-base phase followed by fine-tuning from layer 100 onward.
-- Uses image size `224 x 224`, batch size 32, class weights, random flip/rotation/zoom/contrast augmentation, checkpointing, and early stopping.
-- Saves model artifacts under `models/` locally or `/kaggle/working/models` on Kaggle. Generated artifacts are ignored by git.
+- Plant identification baseline: EfficientNetV2B0, ImageNet pretrained, two-phase
+  training (frozen base, then fine-tune with a lower learning rate).
+- Keep the plant model and disease model separate at first for cleaner
+  debugging.
+- Later evaluate a multi-task model only after both individual models are
+  stable.
+- Model architecture choices should favor formats convertible to TensorFlow
+  Lite or ONNX to support the planned offline / on-device inference roadmap
+  item.
 
 ## Design Decisions
 
 ### Decision: Use metadata instead of copying images
-
 Date: 2026-07-04
 
-Reason:
-
-- Avoids storage duplication
-- Works better on Kaggle disk limits
-- Allows new datasets to be added without rewriting training code
-- Keeps preprocessing independent from training
+Reason: avoids storage duplication; works better on Kaggle disk limits; allows
+new datasets to be added without rewriting training code; keeps preprocessing
+independent from training.
 
 ### Decision: Split notebooks by pipeline stage
-
 Date: 2026-07-04
 
-Notebook plan:
+Notebook plan: `01_dataset_index_builder`, `02_train_plant_model`,
+`03_train_disease_model`, `04_inference`.
 
-- `01_dataset_index_builder.ipynb`
-- `02_train_plant_model.ipynb`
-- `03_train_disease_model.ipynb`
-- `04_inference.ipynb`
-
-Reason:
-
-- Keeps preprocessing, training, and inference independent
-- Makes notebooks easier to rerun and debug
-- Supports future refactoring into scripts and packages
+Reason: keeps preprocessing, training, and inference independent; makes
+notebooks easier to rerun and debug; supports future refactoring into scripts
+and packages.
 
 ### Decision: Use two models first
-
 Date: 2026-07-04
 
-Reason:
-
-- Clearer separation between plant identification and disease classification
-- Easier to debug dataset labeling errors
-- Easier to expand plant coverage before disease coverage
-- Future multi-task or hierarchical models remain possible
+Reason: clearer separation between plant identification and disease
+classification; easier to debug dataset labeling errors; easier to expand
+plant coverage before disease coverage; future multi-task or hierarchical
+models remain possible.
 
 ### Decision: Normalize dataset container and augmentation labels
-
 Date: 2026-07-10
 
-Reason:
+Reason: Kaggle metadata validation showed plant labels such as `Data`,
+`Original Dataset`, `Pea Plant Dataset`, and `Test Disease Severity Level`, and
+augmented datasets created separate labels such as
+`Peach Bacterial Spot Brightness Adjusted`, which would incorrectly increase
+the number of plant and disease classes.
 
-- Kaggle metadata validation showed plant labels such as `Data`, `Original Dataset`, `Pea Plant Dataset`, and `Test Disease Severity Level`.
-- Augmented datasets created separate labels such as `Peach Bacterial Spot Brightness Adjusted`.
-- These labels would incorrectly increase the number of plant and disease classes.
-
-Action:
-
-- Use dataset-name plant hints when folder labels are generic containers.
-- Strip augmentation operation suffixes from disease labels.
-- Remove repeated plant names from disease labels when they appear as suffixes.
+Action: use dataset-name plant hints when folder labels are generic
+containers; strip augmentation operation suffixes from disease labels; remove
+repeated plant names from disease labels when they appear as suffixes.
 
 ### Decision: Add filename-based label fallback and non-informative folder stripping
-
 Date: 2026-07-11
 
-Reason:
+Reason: the 2026-07-10 fix resolved bad plant labels, but had not actually been
+pushed to GitHub `main` (local/remote branches had diverged) until this was
+caught and corrected. After confirming the push, 2,507 `Unknown` disease rows
+remained, almost entirely (2,500 of 2,507) from
+`strawberry-disease-detection-dataset`, which uses two folder layouts the
+parser didn't handle: a flat `test/` split folder with no class subfolder
+(label encoded in the filename, e.g. `angular_leafspot351.jpg`), and a nested
+`Test Disease Severity Level/Level 1/` container that was being misparsed into
+fake "Level 1"/"Level 2" disease classes.
 
-- The 2026-07-10 fix resolved bad plant labels, but the fix had not actually been
-  pushed to GitHub `main` (local/remote branches had diverged), so Kaggle kept running
-  stale code until this was caught and corrected.
-- After confirming the push, 2,507 `Unknown` disease rows remained, almost entirely
-  (2,500 of 2,507) from `strawberry-disease-detection-dataset`.
-- That dataset uses two folder layouts the parser didn't handle: a flat `test/` split
-  folder with no class subfolder (disease name encoded in the filename instead, e.g.
-  `angular_leafspot351.jpg`), and a nested `Test Disease Severity Level/Level 1/`
-  container that was being misparsed into fake "Level 1"/"Level 2" disease classes.
-
-Action:
-
-- Added a filename-based label extraction fallback in `layout_detection.py`, triggered
-  when no usable class folder exists.
-- Added stripping of non-informative folder names (severity-level containers) so the
-  parser falls through to the filename fallback instead of using the container name
-  as the label.
-- Added one disease alias (`angular leafspot` -> `Angular Leaf Spot`) for consistent casing.
+Action: added a filename-based label extraction fallback in
+`layout_detection.py`; added stripping of non-informative folder names so the
+parser falls through to the filename fallback; added one disease alias
+(`angular leafspot` -> `Angular Leaf Spot`).
 
 ### Decision: Wire duplicate detection into the pipeline and resolve cross-split leakage
-
 Date: 2026-07-11
 
-Reason:
+Reason: `duplicates.py` had SHA-256 hashing logic and unit tests, but was never
+actually called from `index_builder.py`; `duplicate_group_id` existed in the
+planned schema but was never populated. A manual review found 7,571 duplicate
+groups (15,209 images), of which 3,057 groups (6,176 images) spanned more than
+one split — a real train/test leakage risk that would inflate evaluation
+metrics.
 
-- `duplicates.py` had SHA-256 hashing logic and unit tests, but was never actually
-  called from `index_builder.py`. `duplicate_group_id` existed in the planned schema
-  but was never populated in real output.
-- A manual duplicate-group review found 7,571 duplicate groups (15,209 images) across
-  the dataset. 3,057 of those groups (6,176 images) spanned more than one split
-  (train/val/test), almost entirely from the augmented plant-village-style datasets
-  (peach, pepper, cherry) and the strawberry and tomato datasets. This is a real
-  train/test leakage risk that would inflate evaluation metrics during model training.
+Action: added `deduplicate_records()` to `duplicates.py`, tagging every image
+with a `duplicate_group_id` and resolving any group spanning multiple splits
+by keeping one copy (preferring `train`); added a hash cache for rebuild
+speed; wired the new function into `01_dataset_index_builder.py` immediately
+after `assign_splits()` and before any CSV is written; fixed `splits.py`'s
+`_replace_split` to use `dataclasses.replace` so it can't silently drop future
+schema fields.
 
-Action:
+Result: dataset size went from 201,094 to 197,975 images (3,119 rows dropped),
+with 0 cross-split leakage confirmed via a fresh pipeline rebuild.
 
-- Added `deduplicate_records()` to `duplicates.py`, tagging every image with a
-  `duplicate_group_id` and, for any group spanning multiple splits, keeping exactly
-  one copy (preferring `train`) and dropping the rest.
-- Added a hash cache (`data/metadata/hash_cache.csv`) so repeat builds skip re-hashing
-  unchanged files, and committed it to the repo (with a `.gitignore` exception) so the
-  speedup persists across fresh Kaggle sessions, not just within one session.
-- Wired the new function into `01_dataset_index_builder.py`, run immediately after
-  `assign_splits()` and before any CSV is written.
-- Fixed `splits.py`'s `_replace_split` to use `dataclasses.replace` instead of manually
-  listing every field, so it won't silently drop future schema additions the way it
-  would have dropped `duplicate_group_id` if left as-is.
+### Decision: Stop tracking generated artifacts in git
+Date: 2026-07-19
 
-Result: dataset size went from 201,094 to 197,975 images (3,119 rows dropped), with
-0 cross-split leakage confirmed via a fresh pipeline rebuild (not just a manual patch).
+Reason: generated metadata, model files, analysis outputs, caches, logs, and
+temporary files do not belong in version control; they bloat the repository
+and can silently go stale relative to the code that produced them.
+
+Action: removed tracked generated training/metadata artifacts from the
+repository; kept only `.gitkeep` placeholders for the required directory
+structure (`data/metadata/`, `models/`, `src/viriditas/data/metadata/`);
+refined `.gitignore` accordingly. Local generated model files still exist
+under `models/.v01/` but are intentionally gitignored.
+
+### Decision: Transition from notebook-centric development to a production Python package
+Date: 2026-08-01
+
+Reason: the original implementation successfully proved the dataset pipeline
+and training workflow using Kaggle notebooks. As the project matured, business
+logic became spread across notebooks, making testing, reuse, API integration,
+and long-term maintenance increasingly difficult.
+
+Action: move reusable logic into `src/viriditas/`; keep notebooks as thin
+wrappers responsible only for orchestration; treat `src/viriditas/` as the
+production codebase.
+
+Outcome: the repository now follows a production-oriented architecture rather
+than a research-only notebook workflow.
+
+### Decision: Centralize configuration
+Date: 2026-08-01
+
+Reason: configuration values such as image size, batch size, dataset paths,
+training parameters, and output directories were duplicated across multiple
+notebooks, creating maintenance problems and making environment portability
+difficult.
+
+Action: introduced `src/viriditas/config/` including `settings.py`,
+`environment.py`, and `__init__.py`. Configuration is now accessed through
+`paths`, `image_config`, `training_config`, and `dataset_config` objects,
+replacing direct constants (`IMAGE_SIZE`, `BATCH_SIZE`, `MODEL_DIR`,
+`OUTPUT_DIR`, `METADATA_DIR`) with `image_config.SIZE`,
+`image_config.BATCH_SIZE`, `paths.models_dir`, `paths.metadata_dir`,
+`paths.resolve_model_path()`, etc.
+
+Benefits: single source of truth; Kaggle, local, and Google Colab
+compatibility; easier testing.
+
+### Decision: Automatic environment detection
+Date: 2026-08-01
+
+Reason: the project should run without manually modifying paths for each
+environment.
+
+Action: implemented environment detection in `src/viriditas/config/environment.py`
+supporting Local, Kaggle, and Google Colab. The detected environment now
+determines metadata paths, model paths, and output directories instead of
+hardcoded per-notebook paths.
+
+### Decision: Centralize model-input preprocessing
+Date: 2026-08-01
+
+Reason: training, evaluation, future inference, the future FastAPI backend,
+and the future Flutter client must all preprocess images identically (image
+loading, resizing, normalization, EfficientNet-specific preprocessing).
+Previously this logic was duplicated per notebook, risking preprocessing drift
+between training and inference.
+
+Action: created a single preprocessing implementation inside
+`src/viriditas/preprocessing/`, shared by every current and future consumer.
+
+Benefits: eliminates preprocessing drift; guarantees consistent inference;
+easier maintenance; a single place for future preprocessing improvements.
+
+### Decision: Adopt the "thin notebook" engineering principle
+Date: 2026-08-01
+
+Reason: business logic embedded in notebooks cannot be reused by FastAPI,
+Flutter, CLI tools, or unit tests, and is harder to test in isolation.
+
+Action: business logic now belongs in `src/viriditas/`; notebooks are limited
+to loading configuration, calling reusable functions, and visualizing results.
+
+### Decision: Version 1 scope is software-only; archive hardware/IoT integrations
+Date: 2026-08-01
+
+Reason: the original prototype included ESP32 sensor integration and an
+Arduino sensor sender sketch. To ship a focused V1 (plant identification,
+disease detection, recommendation engine, FastAPI, Flutter), hardware and IoT
+work needs to be explicitly out of scope rather than an ambient, unscoped
+possibility.
+
+Action: reclassified Arduino, ESP32, IoT sensors, weather stations, and other
+embedded/hardware integrations as "Archived Ideas / Future Possibilities,"
+separate from the active V1 roadmap. `arduino_sensor_sender.ino` remains in
+the repository as a historical artifact from the original prototype only.
 
 ## Current Progress
 
 Completed:
 
-- Identified storage problem caused by image copying
-- Chose metadata-first dataset strategy
-- Chose staged notebooks for preprocessing, training, and inference
-- Established project documentation rules
-- Created project source-of-truth documentation
-- Approved dataset index builder architecture
-- Implemented `src/viriditas/data/` preprocessing package
-- Implemented Kaggle/local dataset index builder entrypoints
-- Added tests for label parsing, layout detection, and split generation
-- Added exact duplicate image detection using SHA-256 hashes
-- Validated Kaggle metadata output for 201,094 images
-- Improved parser rules for generic dataset folders and augmented class folders
-- Added a project journal and Kaggle runbook so progress can be resumed after Kaggle session resets
-- Verified 2026-07-10 parser fixes were live on GitHub after resolving a local/remote branch divergence
-- Reran the full dataset index builder in Kaggle and confirmed 0 rows for all four bad plant labels
-- Added filename-based label extraction fallback for datasets with no class folders
-- Added non-informative folder stripping for nested severity-level subfolders
-- Resolved 2,507 Unknown disease rows down to 7 (a genuinely unlabeled folder in the apple dataset)
-- Fixed a stray `agriai` import left over from the project rename
-- Wired duplicate detection into the pipeline (`deduplicate_records()`), populating
-  `duplicate_group_id` on every row for the first time
-- Resolved 6,176 cross-split leaked images (3,057 duplicate groups) down to 0, dataset
-  now 197,975 images
-- Added a hash cache to speed up future rebuilds
-- Added progress logging to the Kaggle dataset index builder runner
-- Created the plant identification training runner
-- Added augmentation, class weights, checkpointing, early stopping, and fine-tuning to the plant trainer
-- Removed dataset caching from the training pipeline to reduce memory pressure
-- Saved local plant baseline model artifacts under `models/.v01/`
-- Added a plant model analysis runner
-- Refactored generated artifacts out of git and preserved only placeholder directories
+- Identified storage problem caused by image copying; chose metadata-first
+  dataset strategy.
+- Chose staged notebooks for preprocessing, training, and inference.
+- Established project documentation rules; created source-of-truth
+  documentation.
+- Implemented `src/viriditas/data/` preprocessing package and Kaggle/local
+  dataset index builder entrypoints.
+- Added tests for label parsing, layout detection, split generation, and
+  duplicate detection.
+- Validated Kaggle metadata output for 201,094 scanned images.
+- Fixed generic dataset-container plant labels, augmented-class disease
+  labels, filename-encoded labels, and non-informative nested folders. Unknown
+  disease rows reduced from 2,507 to 7 (a genuine source-data gap).
+- Wired duplicate detection into the indexing pipeline; resolved cross-split
+  leakage from 6,176 affected images down to zero, verified on a clean
+  rebuild; added a persisted hash cache.
+- Trained a baseline plant identification model (EfficientNetV2B0 transfer
+  learning): 80.98% test accuracy, with a validation-test accuracy gap of
+  approximately 1 percentage point after adding data augmentation, batch
+  normalization, and early stopping.
+- Built `notebooks/03_model_analysis.py` for plant-model evaluation (known
+  cleanup issues remain; see TODO.md).
+- Stopped tracking generated artifacts in git; added `.gitkeep` placeholders.
+- Centralized configuration (`src/viriditas/config/`: `settings.py`,
+  `environment.py`) with automatic Local / Kaggle / Colab environment
+  detection.
+- Centralized model-input preprocessing into a single shared implementation.
+- Began production package restructuring under `src/viriditas/`.
+- Ran architectural smoke tests after the configuration/preprocessing
+  refactor (import, configuration, and preprocessing validation passed;
+  two environment-specific issues found and confirmed non-architectural).
 
 In progress:
 
-- Stabilize the plant-training handoff: document metrics, fix analysis-script issues, and clean up project structure drift
+- Extracting training logic out of `notebooks/02_train_plant_model.py` into
+  `src/viriditas/training/`.
+- Building `src/viriditas/inference/`.
+- Building `src/viriditas/evaluation/` (migrating `03_model_analysis.py`
+  logic once its known issues are fixed).
+- Converting remaining notebooks into thin wrappers.
 
 Not started:
 
-- Disease classification model training
-- Recommendation engine
+- Disease classification model training.
+- Combined plant + disease inference pipeline.
+- AI recommendation engine.
+- FastAPI backend.
+- Flutter mobile client.
+- LLM orchestration layer.
 
 ## Current Task
 
-Stabilize the plant identification baseline and analysis workflow. Preprocessing is
-validated and stable: 197,975 images, 0 bad plant labels, 7 residual genuinely
-unlabeled images (apple dataset, low priority), 0 cross-split duplicate leakage, all
-wired permanently into the pipeline. Plant training has begun and local model
-artifacts exist, but the metrics and analysis outputs are not yet documented.
-
-Next concrete steps, in order:
-
-1. Fix `notebooks/03_model_analysis.py` before relying on it: local metadata fallback
-   should match the current generated metadata location, `NUM_MISCLASSIFIED_SAMPLES_PER_CLASS`
-   needs a value, and the dataset accuracy plot should use either 0-1 accuracy values
-   or a 0-100 x-axis.
-2. Recover or rerun `plant_id_training_history.json` and record the plant baseline
-   metrics in this plan, the journal, and the changelog.
-3. Decide whether to keep or remove the empty notebook placeholders
-   (`02_train_plant_model.ipynb`, `03_model_analysis.ipynb`).
-4. Remove or reconcile the reintroduced legacy `src/agriai/` package so the active
-   namespace remains `src/viriditas/`.
-5. Decide handling for the 7 remaining unlabeled apple images before disease-model
-   training.
-6. Start the disease classification training runner/notebook.
-
-Resume guide:
-
-- To rebuild the dataset index from a fresh Kaggle session: pull the repo via the
-  GitHub API cell, `%cd` into it, then `%run notebooks/01_dataset_index_builder.py`.
-  This now runs label parsing, split assignment, and duplicate resolution in one pass
-  and can reuse `data/metadata/hash_cache.csv` when that generated cache is present.
-- Use `docs/KAGGLE_RUNBOOK.md` to redownload the repo and rerun preprocessing in Kaggle.
-- Use `docs/JOURNAL.md` for the chronological record of what happened and why.
+1. Remove or reconcile the reintroduced legacy `src/agriai/` package so that
+   `src/viriditas/` remains the only tracked, active package namespace.
+2. Fix known issues in `notebooks/03_model_analysis.py` (local metadata path,
+   undefined misclassified-sample count, dataset-accuracy plot axis) before
+   treating its output as reliable.
+3. Decide handling for the 7 remaining unlabeled apple images.
+4. Continue extracting `src/viriditas/training/`, `src/viriditas/inference/`,
+   and `src/viriditas/evaluation/` out of the current notebook scripts.
+5. Implement lazy model loading ahead of FastAPI integration.
 
 ## Implemented Dataset Index Builder Architecture
-
-Recommended modules:
 
 ```text
 src/viriditas/data/
@@ -430,66 +527,61 @@ src/viriditas/data/
 |-- io.py                  CSV and JSON output helpers
 ```
 
-Recommended notebook:
-
-```text
-notebooks/01_dataset_index_builder.ipynb
-```
-
-The notebook should call reusable Python modules instead of containing all logic inline.
-
 ## Trade-Offs
 
 ### Notebook-only implementation
-
-Pros:
-
-- Fast to prototype
-- Easy to inspect in Kaggle
-
-Cons:
-
-- Harder to test
-- Harder to reuse
-- More likely to become messy as datasets grow
+Pros: fast to prototype; easy to inspect in Kaggle.
+Cons: harder to test; harder to reuse; more likely to become messy as the
+project grows — this is exactly the pressure that motivated the 2026-08-01
+production package refactor.
 
 ### Script/package implementation with notebook wrapper
+Pros: testable; reusable; cleaner training notebooks; easier to maintain as
+VIRIDITAS grows and gains new consumers (FastAPI, Flutter, CLI).
+Cons: slightly more setup upfront.
 
-Pros:
-
-- Testable
-- Reusable
-- Cleaner training notebooks
-- Easier to maintain as VIRIDITAS grows
-
-Cons:
-
-- Slightly more setup upfront
-
-Decision: Use a small Python package under `src/viriditas/` and keep notebooks thin. This has been implemented for the first preprocessing milestone.
+Decision: use a small Python package under `src/viriditas/` and keep notebooks
+thin. Implemented for the data pipeline; in progress for training, inference,
+and evaluation.
 
 ## Next Tasks
 
-1. Fix and run `03_model_analysis.py` against the current plant baseline.
-2. Recover or rerun plant training history and record baseline metrics.
-3. Remove/reconcile the reintroduced `src/agriai/` legacy package.
-4. Decide handling for the 7 remaining unlabeled apple images.
-5. Create `03_train_disease_model.ipynb` or `.py`.
-6. Train baseline disease classification model.
-7. Add unit tests for the filename-based label fallback and non-informative folder
-   stripping (both currently untested despite being load-bearing for the strawberry
-   dataset's 3,243 images).
-8. Add unit tests for `deduplicate_records()` and the hash cache.
+1. Reconcile / remove the legacy `src/agriai/` package.
+2. Fix and rerun `notebooks/03_model_analysis.py`; save summary metrics.
+3. Decide on the 7 unlabeled apple images.
+4. Extract `src/viriditas/training/`.
+5. Extract `src/viriditas/inference/` with lazy model loading.
+6. Extract `src/viriditas/evaluation/`.
+7. Create `03_train_disease_model.ipynb` and train the disease classification
+   model.
+8. Begin FastAPI backend design around the (eventual) inference package.
+9. Begin Flutter client planning.
 
 ## Future Roadmap
 
-- Local model optimization with TensorFlow Lite or ONNX
-- AI recommendation engine
-- Weather integration
-- Fertilizer guidance
-- Offline local LLM assistant
-- Desktop app
-- Mobile app
-- Cloud sync and dataset update workflow
-- Explainable AI visualizations
+Phase 1 — Configuration: done
+Phase 2 — Centralized Preprocessing: done
+Phase 3 — Training Package: in progress
+Phase 4 — Inference Package: not started
+Phase 5 — Evaluation Package: not started
+Phase 6 — Notebook Cleanup (thin wrappers): in progress
+Phase 7 — FastAPI Backend: not started
+Phase 8 — Flutter Client: not started
+Phase 9 — Recommendation Engine: not started
+Phase 10 — LLM Integration: not started
+
+Also planned, not yet phased: explainable AI visualizations; dataset update
+workflow; cloud synchronization; voice interaction.
+
+## Archived Ideas / Future Possibilities (Not Version 1)
+
+These were part of the earlier Flask/ESP32 prototype's ambitions or were
+previously listed as roadmap items. They are retained here for historical
+context and possible future exploration, but are explicitly **not** part of
+Version 1 and should not be treated as active architecture:
+
+- Arduino / ESP32 sensor integration (`arduino_sensor_sender.ino` remains in
+  the repository as a historical artifact of the original prototype only)
+- Physical weather stations / weather-aware recommendations
+- Other embedded or IoT hardware integrations
 - Sensor-aware irrigation recommendations

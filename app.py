@@ -4,12 +4,29 @@ import io
 import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
+from viriditas.preprocessing import ImagePreprocessor
 
 app = Flask(__name__, static_folder=".")
 CORS(app)
 
-# Load trained model once at startup
-model = load_model("plant_disease_model_finetuned.h5")
+# Lazy model loading: load only on first request
+_model = None
+_model_lock = None
+
+def get_model():
+    """Return the loaded model, loading it on first call (thread-safe)."""
+    global _model, _model_lock
+    if _model is None:
+        import threading
+        if _model_lock is None:
+            _model_lock = threading.Lock()
+        with _model_lock:
+            if _model is None:
+                _model = load_model("plant_disease_model_finetuned.h5")
+    return _model
+
+# Preprocessor used for incoming images
+preprocessor = ImagePreprocessor()
 
 class_names = [
     "Apple___Apple_scab", "Apple___Black_rot", "Apple___Cedar_apple_rust", "Apple___healthy",
@@ -172,11 +189,11 @@ def predict():
 
     try:
         img_bytes = file.read()
-        img = image.load_img(io.BytesIO(img_bytes), target_size=(224, 224))
-        img_array = image.img_to_array(img)
-        img_array = np.expand_dims(img_array, axis=0) / 255.0
+        # Use centralized preprocessing (resizing + EfficientNet preprocessing)
+        img_array = preprocessor.preprocess_bytes_to_batch(img_bytes)
 
-        pred = model.predict(img_array)
+        model_instance = get_model()
+        pred = model_instance.predict(img_array)
         pred_index = int(np.argmax(pred))
         confidence = float(pred[0][pred_index] * 100)
 

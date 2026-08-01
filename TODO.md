@@ -1,6 +1,8 @@
+# TODO.md
+
 # VIRIDITAS TODO
 
-Last updated: 2026-07-19
+Last updated: 2026-08-01
 
 ## Documentation
 
@@ -11,6 +13,24 @@ Last updated: 2026-07-19
 - [x] Create `docs/JOURNAL.md`
 - [x] Create `docs/KAGGLE_RUNBOOK.md`
 - [x] Keep documentation updated after every major architecture or implementation change
+- [x] Document the production package refactor across PROJECT_PLAN, TODO, CHANGELOG, JOURNAL
+
+## Architecture Refactor
+
+- [x] Remove duplicated `agriai` package as the active namespace (`src/viriditas/` is authoritative)
+- [x] Centralize configuration (`src/viriditas/config/`: `settings.py`, `environment.py`)
+- [x] Add automatic environment detection (Local / Kaggle / Google Colab)
+- [x] Centralize model-input preprocessing (image load, resize, normalize, EfficientNet preprocessing) into a single shared implementation
+- [ ] Extract training package (`src/viriditas/training/`)
+- [ ] Extract inference package (`src/viriditas/inference/`)
+- [ ] Extract evaluation package (`src/viriditas/evaluation/`)
+- [ ] Convert remaining notebooks into thin wrappers (orchestration only, no business logic)
+- [ ] Introduce lazy model loading in the inference package (avoid loading TensorFlow models at import time)
+- [ ] Remove or reconcile the reintroduced legacy `src/agriai/` package so `src/viriditas/` remains the only tracked, active package namespace
+- [ ] Build FastAPI service
+- [ ] Build Flutter client
+- [ ] Integrate recommendation engine
+- [ ] Integrate LLM orchestration
 
 ## Dataset Pipeline
 
@@ -52,8 +72,18 @@ Last updated: 2026-07-19
 - [x] Add hash cache to speed up repeat dedup runs
 - [x] Stop tracking generated metadata/hash-cache artifacts in git; keep metadata folders via `.gitkeep`
 - [x] Fix `_replace_split` in `splits.py` to use `dataclasses.replace` (avoid silently dropping future fields)
+- [x] Add progress logging to the dataset index builder runner
 - [ ] Decide handling for the 7 remaining unlabeled apple images (drop vs. keep as tiny Unknown class)
 - [ ] Decide whether the dedup hash cache needs a non-git persistence path, such as a Kaggle Dataset artifact, if rebuild speed becomes painful again
+
+## Configuration
+
+- [x] Design centralized configuration objects (`paths`, `image_config`, `training_config`, `dataset_config`)
+- [x] Implement `src/viriditas/config/settings.py`
+- [x] Implement `src/viriditas/config/environment.py` (Local / Kaggle / Colab detection)
+- [x] Migrate away from direct constants (`IMAGE_SIZE`, `BATCH_SIZE`, `MODEL_DIR`, `OUTPUT_DIR`, `METADATA_DIR`)
+- [ ] Migrate all remaining notebooks/scripts fully onto the config objects (audit for leftover hardcoded constants)
+- [ ] Add unit tests for environment detection across all three supported environments
 
 ## Testing
 
@@ -62,12 +92,14 @@ Last updated: 2026-07-19
 - [x] Add tests for split generation
 - [x] Add tests for duplicate detection
 - [x] Add tests for generic folder and augmentation label parsing
+- [x] Run architectural smoke tests (import validation, configuration validation, preprocessing validation)
 - [ ] Add tests for filename-based label fallback
 - [ ] Add tests for non-informative folder stripping (severity-level subfolders)
 - [ ] Add tests for `deduplicate_records()` and cross-split resolution
 - [ ] Add tests for the hash cache (cache hit/miss behavior)
 - [ ] Add tests for metadata schema validation
 - [ ] Add a smoke/static check for `notebooks/03_model_analysis.py`
+- [ ] Add unit tests for the centralized preprocessing module
 
 ## Training
 
@@ -82,19 +114,28 @@ Last updated: 2026-07-19
 - [x] Create `notebooks/03_model_analysis.py`
 - [ ] Fix analysis script issues before relying on it: local metadata path, undefined misclassified-sample count, and dataset-accuracy plot axis
 - [ ] Run plant model analysis and save summary metrics
+- [ ] Begin extracting training logic out of `notebooks/02_train_plant_model.py` into `src/viriditas/training/`
 - [ ] Create `03_train_disease_model.ipynb`
 - [ ] Train baseline disease classification model
 - [ ] Save disease label maps with trained models
 - [ ] Track metrics and confusion matrices
-- [ ] Remove or reconcile the reintroduced legacy `src/agriai/` package so `src/viriditas/` remains the only active package namespace
+- [ ] Remove or reconcile the reintroduced legacy `src/agriai/` package so `src/viriditas/` remains the only active package namespace *(duplicated here intentionally — tracked under both Architecture Refactor and Training since it currently blocks a clean training-package extraction)*
 
 ## Inference
 
-- [ ] Create `04_inference.ipynb`
+- [ ] Create `src/viriditas/inference/` package
+- [ ] Implement lazy model loading (do not load TensorFlow models at import time)
 - [ ] Build plant identification inference step
 - [ ] Build disease classification inference step
 - [ ] Combine both models into one inference pipeline
 - [ ] Return confidence scores and top predictions
+- [ ] Create `04_inference.ipynb` as a thin wrapper over `src/viriditas/inference/`
+
+## Evaluation
+
+- [ ] Create `src/viriditas/evaluation/` package
+- [ ] Migrate `03_model_analysis.py` logic into the evaluation package once its known issues are fixed
+- [ ] Standardize evaluation outputs (confusion matrix, classification report, per-class accuracy) for both plant and disease models
 
 ## Recommendation Engine
 
@@ -103,20 +144,25 @@ Last updated: 2026-07-19
 - [ ] Add fertilizer guidance
 - [ ] Add prevention guidance
 - [ ] Add AI-generated explanations
-- [ ] Add weather-aware recommendations
 
-## Application
+## Application (Version 1 — Software)
 
-- [ ] Refactor current Flask prototype around the new inference pipeline
-- [ ] Preserve useful sensor and irrigation functionality
-- [ ] Build desktop application prototype
-- [ ] Plan mobile application architecture
+- [ ] Build FastAPI backend service around the inference pipeline
+- [ ] Build a cross-platform mobile application (Flutter)
+- [ ] Plan mobile application architecture and offline model packaging
 - [ ] Add offline model packaging
 
 ## Future Expansion
 
-- [ ] Local LLM integration
+- [ ] Local LLM integration / LLM orchestration layer
 - [ ] Voice interaction
 - [ ] Cloud synchronization
 - [ ] Explainable AI visualizations
 - [ ] Dataset update workflow
+
+## Archived Ideas / Future Possibilities (Not Version 1)
+
+- [ ] Weather-aware recommendations *(archived for V1; revisit once the recommendation engine exists)*
+- [ ] Arduino / ESP32 sensor integration
+- [ ] Physical weather stations
+- [ ] Other embedded / IoT hardware integrations
