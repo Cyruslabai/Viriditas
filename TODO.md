@@ -137,6 +137,31 @@ Last updated: 2026-08-01
 - [ ] Migrate `03_model_analysis.py` logic into the evaluation package once its known issues are fixed
 - [ ] Standardize evaluation outputs (confusion matrix, classification report, per-class accuracy) for both plant and disease models
 
+### Technical Debt / Performance Optimization: Avoid duplicate preprocessing during evaluation dataset construction
+
+- Title: Avoid duplicate preprocessing during evaluation dataset construction
+
+- Description: During architecture review, we identified that the evaluation pipeline likely calls the image preprocessing function twice per image inside `build_test_dataset()` (specifically around the `_load()` closure and `tf.data.Dataset.map()` implementation in `src/viriditas/evaluation/evaluator.py`).
+
+  This is not blocking correctness, but it may:
+  - Double image loading from disk
+  - Double preprocessing work
+  - Increase evaluation time
+  - Introduce unnecessary computation
+  - Potentially affect correctness if preprocessing ever becomes stochastic
+
+- Priority: Medium
+- Status: Deferred until after baseline model analysis is complete.
+
+- Acceptance Criteria:
+  - Each image is loaded exactly once during evaluation.
+  - Preprocessing is executed exactly once per sample.
+  - Evaluation outputs remain identical before and after the optimization.
+  - Performance improves without changing evaluation results.
+
+- Note on deferral: The current priority is establishing a verified baseline for the plant identification model. Performance optimizations will be implemented only after the evaluation pipeline has been validated.
+
+
 ## Recommendation Engine
 
 - [ ] Define treatment recommendation schema
