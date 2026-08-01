@@ -1,5 +1,63 @@
 # VIRIDITAS
 
+VIRIDITAS is an AI platform for plant identification, disease detection, and agricultural recommendations. The repository provides modular components for dataset indexing, preprocessing, model training, inference, and evaluation.
+
+Features
+- Metadata-first dataset indexing (no image duplication)
+- Centralized preprocessing compatible with EfficientNetV2
+- Modular training pipeline using transfer learning (EfficientNetV2B0)
+- Reusable inference API with cached model loading
+- Reusable evaluation package for reports and visualizations
+- Automated tests and example notebooks for development
+
+Quickstart
+1. Install dependencies:
+   pip install -r requirements.txt
+
+2. Add dataset metadata (or use provided sample fixtures):
+   Place `plant_id_dataset.csv` under `data/metadata/` and images at paths referenced by the CSV.
+
+3. Training (notebook or CLI):
+   - Notebook entrypoint: `notebooks/02_train_plant_model.py` (thin wrapper calling the trainer)
+   - Programmatic usage:
+     from viriditas.training import PlantIdentifierTrainer
+     trainer = PlantIdentifierTrainer()
+     trainer.run()
+
+4. Inference:
+   - Use the reusable predictor:
+     from viriditas.inference import PlantPredictor
+     p = PlantPredictor()
+     p.predict(path)
+
+5. Evaluation:
+   - Use the evaluator to run analysis and save reports:
+     from viriditas.evaluation import Evaluator
+     ev = Evaluator()
+     ev.run()
+
+Running tests
+- Tests live under `tests/`. Run with:
+  pytest -q
+
+Project layout
+- src/viriditas/: core package
+  - config/: environment-aware configuration and constants
+  - preprocessing.py: centralized ImagePreprocessor
+  - training/: dataset, model, callbacks, trainer
+  - inference/: loader, predictor, preprocessing adapter, postprocessing
+  - evaluation/: evaluator, metrics, reports, visualizations
+- notebooks/: thin wrappers for training and analysis
+- tests/: automated unit and integration tests
+
+Roadmap
+- Consolidate disease and plant inference APIs
+- Add CI with unit+integration tests
+- Production FastAPI backend and Docker deployment
+
+For architecture details, developer setup, and testing guidance see docs/ARCHITECTURE.md, docs/DEVELOPMENT.md, and docs/TESTING.md.
+
+
 VIRIDITAS is an AI software platform focused on plant identification, disease detection, and AI-powered recommendations. The project provides robust data engineering, training, evaluation, and an extensible recommendation engine for agricultural guidance.
 
 The current engineering milestone is stabilizing the first plant identification baseline after completing the metadata-driven dataset pipeline. Instead of copying images into new folders, VIRIDITAS indexes existing Kaggle datasets in place and creates standardized CSV metadata for training plant identification and disease classification models.

@@ -49,9 +49,16 @@ class ImagePreprocessor:
     def preprocess_path_to_batch(self, path: str) -> np.ndarray:
         """Convenience: return a numpy array with batch dim from a filesystem path."""
         img = self.load_from_path(path)
-        return np.expand_dims(img, axis=0).numpy()
+        # img may be a Tensor or a numpy array depending on execution mode
+        if hasattr(img, "numpy"):
+            return img.numpy()[None, ...]
+        else:
+            return np.expand_dims(img, axis=0)
 
     def preprocess_bytes_to_batch(self, data: bytes) -> np.ndarray:
         """Convenience: return a numpy array with batch dim from raw image bytes."""
         img = self.load_from_bytes(data)
-        return np.expand_dims(img, axis=0).numpy()
+        if hasattr(img, "numpy"):
+            return img.numpy()[None, ...]
+        else:
+            return np.expand_dims(img, axis=0)

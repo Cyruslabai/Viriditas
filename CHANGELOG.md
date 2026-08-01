@@ -2,6 +2,20 @@
 
 # Changelog
 
+## 2026-08-01 — Phase 9: Production Readiness & Final Cleanup (finalized)
+
+### Fixed
+
+- Removed temporary developer artifacts: smoke_test_phase3.py, smoke_test_inference.py, smoke_test_imports.py, smoke_test_full_imports.py, create_smoke_dataset.py, run_evaluator.py.
+- Moved synthetic test image to tests/fixtures/img1.jpg and updated data/metadata/plant_id_dataset.csv to reference the fixture.
+- Ran full pytest suite: 21 passed, 4 warnings. Import and architecture verification passed; no circular imports detected.
+
+### Notes
+
+- No changes to ML behavior or production datasets were made as part of this cleanup. Documentation and TODOs were updated to reflect completion.
+
+---
+
 ## 2026-08-01
 
 ### Added

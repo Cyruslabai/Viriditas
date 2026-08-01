@@ -2,6 +2,18 @@
 
 # VIRIDITAS Project Journal
 
+## 2026-08-01 22:34:21 — Phase 9: Final Cleanup (completed)
+
+Summary:
+
+- Completed Phase 9: Production Readiness & Final Cleanup.
+- Deleted temporary developer artifacts and moved the synthetic test image to tests/fixtures/img1.jpg.
+- Updated repository metadata to point tests to the fixture image and removed temporary smoke-test scripts.
+- Ran full test suite: 21 passed, 4 expected warnings. Import and architecture checks passed; no circular imports found.
+- Updated TODO.md and PROJECT_PLAN.md to mark the training, inference, and evaluation package extractions as completed.
+
+This entry finalizes the refactor work and marks the architecture stable and ready for development tasks (datasets, model improvements, deployment).
+
 This journal records the engineering history, decisions, run results,
 blockers, and resume notes for VIRIDITAS. `PROJECT_PLAN.md` remains the source
 of truth for architecture; this file is the chronological working memory.

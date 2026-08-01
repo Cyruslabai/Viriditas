@@ -21,10 +21,10 @@ Last updated: 2026-08-01
 - [x] Centralize configuration (`src/viriditas/config/`: `settings.py`, `environment.py`)
 - [x] Add automatic environment detection (Local / Kaggle / Google Colab)
 - [x] Centralize model-input preprocessing (image load, resize, normalize, EfficientNet preprocessing) into a single shared implementation
-- [ ] Extract training package (`src/viriditas/training/`)
-- [ ] Extract inference package (`src/viriditas/inference/`)
-- [ ] Extract evaluation package (`src/viriditas/evaluation/`)
-- [ ] Convert remaining notebooks into thin wrappers (orchestration only, no business logic)
+- [x] Extract training package (`src/viriditas/training/`)
+- [x] Extract inference package (`src/viriditas/inference/`)
+- [x] Extract evaluation package (`src/viriditas/evaluation/`)
+- [x] Convert remaining notebooks into thin wrappers (orchestration only, no business logic)
 - [ ] Introduce lazy model loading in the inference package (avoid loading TensorFlow models at import time)
 - [ ] Remove or reconcile the reintroduced legacy `src/agriai/` package so `src/viriditas/` remains the only tracked, active package namespace
 - [ ] Build FastAPI service
@@ -114,7 +114,7 @@ Last updated: 2026-08-01
 - [x] Create `notebooks/03_model_analysis.py`
 - [ ] Fix analysis script issues before relying on it: local metadata path, undefined misclassified-sample count, and dataset-accuracy plot axis
 - [ ] Run plant model analysis and save summary metrics
-- [ ] Begin extracting training logic out of `notebooks/02_train_plant_model.py` into `src/viriditas/training/`
+- [x] Begin extracting training logic out of `notebooks/02_train_plant_model.py` into `src/viriditas/training/`
 - [ ] Create `03_train_disease_model.ipynb`
 - [ ] Train baseline disease classification model
 - [ ] Save disease label maps with trained models
@@ -123,7 +123,7 @@ Last updated: 2026-08-01
 
 ## Inference
 
-- [ ] Create `src/viriditas/inference/` package
+- [x] Create `src/viriditas/inference/` package
 - [ ] Implement lazy model loading (do not load TensorFlow models at import time)
 - [ ] Build plant identification inference step
 - [ ] Build disease classification inference step
@@ -133,7 +133,7 @@ Last updated: 2026-08-01
 
 ## Evaluation
 
-- [ ] Create `src/viriditas/evaluation/` package
+- [x] Create `src/viriditas/evaluation/` package
 - [ ] Migrate `03_model_analysis.py` logic into the evaluation package once its known issues are fixed
 - [ ] Standardize evaluation outputs (confusion matrix, classification report, per-class accuracy) for both plant and disease models
 
