@@ -87,19 +87,34 @@ class PathConfig:
     def artifact_metadata_dir(self) -> Optional[Path]:
         """Metadata directory inside the attached artifact dataset, if present.
 
-        Common layouts checked:
-        - <artifact>/metadata
-        - <artifact>/data/metadata
-        - single-level metadata dir anywhere under the artifact root
+        Detection order:
+        1. If artifact root contains metadata files (plant_id_dataset.csv, disease_dataset.csv,
+           master_dataset.csv, or label_map_plants_used.json), return artifact root immediately.
+        2. Check common layouts: <artifact>/metadata, <artifact>/data/metadata
+        3. Scan one level deep for nested metadata directories
         """
         artifact = self.artifact_dir
         if artifact is None:
             return None
-        # Common candidate locations
+
+        # Expected metadata files that indicate artifact root is the metadata directory
+        metadata_indicators = {
+            "plant_id_dataset.csv",
+            "disease_dataset.csv",
+            "master_dataset.csv",
+            "label_map_plants_used.json",
+        }
+
+        # Check if artifact root itself contains metadata files
+        if any((artifact / filename).exists() for filename in metadata_indicators):
+            return artifact
+
+        # Check common subdirectory layouts
         candidates = [artifact / "metadata", artifact / "data" / "metadata"]
         for c in candidates:
             if c.exists() and c.is_dir():
                 return c
+
         # Scan one level deep for 'metadata' or '*/metadata'
         for entry in artifact.iterdir():
             if entry.is_dir() and entry.name.lower() == "metadata":
@@ -107,6 +122,7 @@ class PathConfig:
             nested = entry / "metadata"
             if nested.exists() and nested.is_dir():
                 return nested
+
         return None
 
     @property
