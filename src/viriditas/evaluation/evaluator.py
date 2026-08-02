@@ -20,7 +20,8 @@ class Evaluator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def load_test_data(self) -> tuple[pd.DataFrame, dict[str,int]]:
-        df = dataset_module.load_metadata()
+        # For evaluation prefer artifact-provided metadata when available
+        df = dataset_module.load_metadata(use_artifact=True)
         label_map = dataset_module.build_label_map(df)
         test_df = df[df["split"] == "test"].reset_index(drop=True)
         return test_df, label_map
