@@ -2,20 +2,25 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 from viriditas.config.environment import Environment, detect_environment
 
 
 @dataclass
 class PathConfig:
-    """Path configuration resolved based on environment."""
+    """Path configuration resolved based on environment.
+
+    This class distinguishes between writable output directories (used during
+    indexing and training) and read-only artifact directories (available when
+    an artifacts dataset is attached in Kaggle under /kaggle/input).
+    """
 
     environment: Environment = field(default_factory=detect_environment)
 
     @property
     def base_data_dir(self) -> Path:
-        """Base directory for data."""
+        """Base directory for data (writable)."""
         if self.environment == Environment.KAGGLE:
             return Path("/kaggle/working/data")
         elif self.environment == Environment.COLAB:
@@ -25,7 +30,7 @@ class PathConfig:
 
     @property
     def base_models_dir(self) -> Path:
-        """Base directory for models."""
+        """Base directory for models (writable)."""
         if self.environment == Environment.KAGGLE:
             return Path("/kaggle/working/models")
         elif self.environment == Environment.COLAB:
@@ -35,20 +40,73 @@ class PathConfig:
 
     @property
     def metadata_dir(self) -> Path:
-        """Metadata subdirectory."""
+        """Writable metadata directory (used for training and indexing)."""
         return self.base_data_dir / "metadata"
 
     @property
+    def artifact_dir(self) -> Optional[Path]:
+        """Path to an attached artifacts dataset named 'viriditas-artifacts', if any.
+
+        Searches /kaggle/input for a dataset whose directory name contains
+        'viriditas-artifacts' (case-insensitive). Returns None when not on
+        Kaggle or when no artifact dataset is attached.
+        """
+        if self.environment != Environment.KAGGLE:
+            return None
+        input_root = Path("/kaggle/input")
+        if not input_root.exists():
+            return None
+        for entry in input_root.iterdir():
+            if not entry.is_dir():
+                continue
+            if "viriditas-artifacts" in entry.name.lower():
+                return entry
+        return None
+
+    @property
+    def artifact_metadata_dir(self) -> Optional[Path]:
+        """Metadata directory inside the attached artifact dataset, if present.
+
+        Common layouts checked:
+        - <artifact>/metadata
+        - <artifact>/data/metadata
+        - single-level metadata dir anywhere under the artifact root
+        """
+        artifact = self.artifact_dir
+        if artifact is None:
+            return None
+        # Common candidate locations
+        candidates = [artifact / "metadata", artifact / "data" / "metadata"]
+        for c in candidates:
+            if c.exists() and c.is_dir():
+                return c
+        # Scan one level deep for 'metadata' or '*/metadata'
+        for entry in artifact.iterdir():
+            if entry.is_dir() and entry.name.lower() == "metadata":
+                return entry
+            nested = entry / "metadata"
+            if nested.exists() and nested.is_dir():
+                return nested
+        return None
+
+    @property
     def models_dir(self) -> Path:
-        """Models subdirectory."""
+        """Models subdirectory (writable)."""
         return self.base_models_dir
 
     def resolve_model_path(self, model_name: str = "plant_id_model.keras") -> Path:
-        """Get specific model path."""
+        """Get specific model path (writable)."""
         return self.models_dir / model_name
 
-    def resolve_metadata_file(self, filename: str) -> Path:
-        """Get specific metadata file path."""
+    def resolve_metadata_file(self, filename: str, use_artifact: bool = False) -> Path:
+        """Get specific metadata file path.
+
+        By default returns a path in the writable metadata_dir (for writing).
+        When use_artifact=True and an artifact metadata dir exists, returns a
+        path inside the artifact metadata directory (read-only).
+        """
+        if use_artifact and self.artifact_metadata_dir is not None:
+            return self.artifact_metadata_dir / filename
         path = self.metadata_dir / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
