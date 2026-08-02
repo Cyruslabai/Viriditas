@@ -39,16 +39,8 @@ def get_label_map() -> dict[str, int]:
     if _LABEL_MAP is not None:
         return _LABEL_MAP
 
-    # Prefer reading metadata from an attached artifacts dataset when available
-    if getattr(paths, "artifact_metadata_dir", None) is not None:
-        candidate = paths.artifact_metadata_dir / "label_map_plants_used.json"
-        if candidate.exists():
-            label_path = candidate
-        else:
-            label_path = paths.metadata_dir / "label_map_plants_used.json"
-    else:
-        label_path = paths.metadata_dir / "label_map_plants_used.json"
-
+    # Centralized resolution: prefer artifact metadata when available
+    label_path = paths.resolve_metadata_file("label_map_plants_used.json", use_artifact=True)
     if not label_path.exists():
         raise FileNotFoundError(f"Label map not found at {label_path}")
     _LABEL_MAP = json.loads(label_path.read_text())
