@@ -45,22 +45,42 @@ class PathConfig:
 
     @property
     def artifact_dir(self) -> Optional[Path]:
-        """Path to an attached artifacts dataset named 'viriditas-artifacts', if any.
+        """Recursively search /kaggle/input for an artifacts dataset named 'viriditas-artifacts'.
 
-        Searches /kaggle/input for a dataset whose directory name contains
-        'viriditas-artifacts' (case-insensitive). Returns None when not on
-        Kaggle or when no artifact dataset is attached.
+        Looks for directories whose name equals (preferred) or contains 'viriditas-artifacts'
+        (case-insensitive). If multiple matches are found for the preferred or fallback search,
+        raises RuntimeError to avoid ambiguity. Returns None when not on Kaggle or no match.
         """
         if self.environment != Environment.KAGGLE:
             return None
         input_root = Path("/kaggle/input")
         if not input_root.exists():
             return None
-        for entry in input_root.iterdir():
-            if not entry.is_dir():
+        target = "viriditas-artifacts"
+        exact_matches: list[Path] = []
+        contains_matches: list[Path] = []
+        # Recursively search all subdirectories without assuming fixed depth
+        for p in input_root.rglob("*"):
+            if not p.is_dir():
                 continue
-            if "viriditas-artifacts" in entry.name.lower():
-                return entry
+            name = p.name.lower()
+            if name == target:
+                exact_matches.append(p)
+            elif target in name:
+                contains_matches.append(p)
+        if len(exact_matches) == 1:
+            return exact_matches[0]
+        if len(exact_matches) > 1:
+            raise RuntimeError(
+                f"Multiple exact artifact directories found under {input_root}: {', '.join(str(p) for p in exact_matches)}"
+            )
+        # No exact match — prefer a single contains match
+        if len(contains_matches) == 1:
+            return contains_matches[0]
+        if len(contains_matches) > 1:
+            raise RuntimeError(
+                f"Multiple artifact directories matching '{target}' found under {input_root}: {', '.join(str(p) for p in contains_matches)}"
+            )
         return None
 
     @property
