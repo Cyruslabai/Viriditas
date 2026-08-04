@@ -39,8 +39,8 @@ def get_label_map() -> dict[str, int]:
         return _LABEL_MAP
 
     label_path = paths.resolve_metadata_file(
-        "label_map_plants_used.json",
-        use_artifact=True
+        "label_map_plants.json",
+        use_artifact=True,
     )
 
     print("Loading label map from:", label_path)
