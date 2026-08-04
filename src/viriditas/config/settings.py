@@ -130,9 +130,42 @@ class PathConfig:
         """Models subdirectory (writable)."""
         return self.base_models_dir
 
-    def resolve_model_path(self, model_name: str = "plant_id_model.keras") -> Path:
-        """Get specific model path (writable)."""
-        return self.models_dir / model_name
+    def resolve_best_model_path(self) -> Path:
+        """Resolve the path to the canonical best_plant_model.keras.
+
+        On Kaggle, recursively searches /kaggle/input/models for best_plant_model.keras.
+        On local development, returns models/best_plant_model.keras.
+
+        Returns:
+            Path to best_plant_model.keras
+
+        Raises:
+            FileNotFoundError: If the model cannot be found.
+        """
+        model_filename = "best_plant_model.keras"
+
+        # Try Kaggle artifact first if on Kaggle
+        if self.environment == Environment.KAGGLE:
+            model_input_root = Path("/kaggle/input/models")
+            if model_input_root.exists():
+                # Recursively search for best_plant_model.keras
+                matches = list(model_input_root.rglob(model_filename))
+                if matches:
+                    if len(matches) == 1:
+                        return matches[0]
+                    # Multiple matches — return the first one found (should not happen)
+                    return matches[0]
+
+        # Fallback: local models directory
+        local_model = self.models_dir / model_filename
+        if local_model.exists():
+            return local_model
+
+        # Model not found anywhere
+        raise FileNotFoundError(
+            f"Model '{model_filename}' not found. "
+            f"Checked: Kaggle artifact (/kaggle/input/models) and local ({self.models_dir})"
+        )
 
     def resolve_metadata_file(self, filename: str, use_artifact: bool = False) -> Path:
         """Get specific metadata file path.

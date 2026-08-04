@@ -12,23 +12,23 @@ _MODEL: tf.keras.Model | None = None
 _LABEL_MAP: dict[str, int] | None = None
 
 
-def get_model(model_name: str | None = None) -> tf.keras.Model:
-    """Lazily load and cache the Keras model from paths.models_dir.
+def get_model() -> tf.keras.Model:
+    """Lazily load and cache the canonical best_plant_model.keras.
 
-    Args:
-        model_name: optional model filename. Defaults to 'plant_id_model.keras'.
+    On Kaggle, automatically locates the model in the attached artifact.
+    On local development, uses models/best_plant_model.keras.
+
+    Returns:
+        Cached Keras model instance.
+
+    Raises:
+        FileNotFoundError: If best_plant_model.keras cannot be found.
     """
     global _MODEL
     if _MODEL is not None:
         return _MODEL
 
-    model_name = model_name or "plant_id_model.keras"
-    model_path = paths.resolve_model_path(model_name)
-    if not model_path.exists():
-        # Try best model name as fallback
-        alt = paths.resolve_model_path("best_plant_model.keras")
-        if alt.exists():
-            model_path = alt
+    model_path = paths.resolve_best_model_path()
     _MODEL = tf.keras.models.load_model(model_path)
     return _MODEL
 
