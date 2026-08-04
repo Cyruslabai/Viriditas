@@ -34,16 +34,25 @@ def get_model() -> tf.keras.Model:
 
 
 def get_label_map() -> dict[str, int]:
-    """Load and cache label_map_plants_used.json from metadata dir."""
     global _LABEL_MAP
     if _LABEL_MAP is not None:
         return _LABEL_MAP
 
-    # Centralized resolution: prefer artifact metadata when available
-    label_path = paths.resolve_metadata_file("label_map_plants_used.json", use_artifact=True)
+    label_path = paths.resolve_metadata_file(
+        "label_map_plants_used.json",
+        use_artifact=True
+    )
+
+    print("Loading label map from:", label_path)
+
     if not label_path.exists():
         raise FileNotFoundError(f"Label map not found at {label_path}")
+
     _LABEL_MAP = json.loads(label_path.read_text())
+
+    print("Number of classes:", len(_LABEL_MAP))
+    print("First keys:", list(_LABEL_MAP.keys())[:10])
+
     return _LABEL_MAP
 
 
