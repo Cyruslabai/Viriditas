@@ -59,6 +59,7 @@ class PathConfig:
         target = "viriditas-artifacts"
         exact_matches: list[Path] = []
         contains_matches: list[Path] = []
+        print("Starting artifact search...")
         # Recursively search all subdirectories without assuming fixed depth
         for p in input_root.rglob("*"):
             if not p.is_dir():
