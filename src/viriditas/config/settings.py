@@ -61,14 +61,25 @@ class PathConfig:
         contains_matches: list[Path] = []
         print("Starting artifact search...")
         # Recursively search all subdirectories without assuming fixed depth
-        for p in input_root.rglob("*"):
-            if not p.is_dir():
+        # Search only dataset directories (avoid traversing every image file)
+        for top in input_root.iterdir():
+            if not top.is_dir():
                 continue
-            name = p.name.lower()
-            if name == target:
-                exact_matches.append(p)
-            elif target in name:
-                contains_matches.append(p)
+
+            for owner in top.iterdir():
+                if not owner.is_dir():
+                    continue
+
+                for dataset in owner.iterdir():
+                    if not dataset.is_dir():
+                        continue
+
+                    name = dataset.name.lower()
+
+                    if name == target:
+                        exact_matches.append(dataset)
+                    elif target in name:
+                        contains_matches.append(dataset)
         if len(exact_matches) == 1:
             return exact_matches[0]
         if len(exact_matches) > 1:
