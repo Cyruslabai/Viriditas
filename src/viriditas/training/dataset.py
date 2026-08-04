@@ -17,21 +17,35 @@ SEED = training_config.RANDOM_SEED
 
 
 def load_metadata(use_artifact: bool = False) -> pd.DataFrame:
-    """Load the main dataset CSV.
+    import time
 
-    By default reads from the writable metadata directory (used during
-    indexing/training). When use_artifact=True and an artifact metadata
-    directory is attached (Kaggle), prefer reading from the artifact
-    metadata directory and fall back to the writable metadata directory.
-    """
-    path = paths.resolve_metadata_file("plant_id_dataset.csv", use_artifact=use_artifact)
-    if not path.exists() and use_artifact:
-        # If artifact was requested but file missing, fall back to writable location
-        path = paths.resolve_metadata_file("plant_id_dataset.csv", use_artifact=False)
+    print("Resolving path...")
+    t = time.time()
+
+    path = paths.resolve_metadata_file(
+        "plant_id_dataset.csv",
+        use_artifact=use_artifact
+    )
+
+    print("Path:", path)
+    print("Resolved in", time.time() - t)
+
+    print("Reading CSV...")
+    t = time.time()
+
     df = pd.read_csv(path)
-    df = df[df["plant"].notna() & (df["plant"] != "")]
-    return df
 
+    print("CSV loaded in", time.time() - t)
+    print("Rows:", len(df))
+
+    print("Filtering...")
+    t = time.time()
+
+    df = df[df["plant"].notna() & (df["plant"] != "")]
+
+    print("Filtered in", time.time() - t)
+
+    return df
 
 def build_label_map(df: pd.DataFrame) -> dict[str, int]:
     classes = sorted(df["task_plant_label"].unique())
