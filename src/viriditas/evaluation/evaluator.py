@@ -19,13 +19,21 @@ class Evaluator:
         self.output_dir = output_dir or (paths.models_dir / "analysis")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def load_test_data(self) -> tuple[pd.DataFrame, dict[str,int]]:
-        # For evaluation prefer artifact-provided metadata when available
-        df = dataset_module.load_metadata(use_artifact=True)
-        label_map = dataset_module.build_label_map(df)
-        test_df = df[df["split"] == "test"].reset_index(drop=True)
-        return test_df, label_map
+    def load_test_data(self):
+        import time
 
+        t = time.time()
+        print("Reading metadata...")
+        df = dataset_module.load_metadata(use_artifact=True)
+        print(f"Metadata loaded in {time.time() - t:.2f}s")
+        print(f"Rows: {len(df)}")
+
+        t = time.time()
+        print("Loading label map...")
+        label_map = loader.get_label_map()
+        print(f"Label map loaded in {time.time() - t:.2f}s")
+
+        return df, label_map
     def build_test_dataset(self, test_df: pd.DataFrame, label_map: dict[str,int]):
         ds, n = dataset_module.make_dataset(test_df, label_map, "test", shuffle=False) if False else (None, 0)
         # reuse notebook logic: build tf.data.Dataset directly
