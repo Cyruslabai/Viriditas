@@ -18,6 +18,10 @@ SEED = training_config.RANDOM_SEED
 
 def load_metadata(use_artifact: bool = False) -> pd.DataFrame:
     import time
+    print("use_artifact:", use_artifact)
+    print("artifact_dir:", paths.artifact_dir)
+    print("artifact_metadata_dir:", paths.artifact_metadata_dir)
+    print("metadata_dir:", paths.metadata_dir)
 
     print("Resolving path...")
     t = time.time()
