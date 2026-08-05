@@ -20,7 +20,7 @@ class PlantIdentifierTrainer:
     def run(self) -> None:
         print("GPUs available:", tf.config.list_physical_devices("GPU"))
 
-        df = dataset_module.load_metadata()
+        df = dataset_module.load_metadata(use_artifact=True)
         label_map = dataset_module.build_label_map(df)
         num_classes = len(label_map)
         print("=" * 60)
