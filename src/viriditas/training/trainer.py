@@ -23,7 +23,12 @@ class PlantIdentifierTrainer:
         df = dataset_module.load_metadata()
         label_map = dataset_module.build_label_map(df)
         num_classes = len(label_map)
-        print(f"Classes ({num_classes}):", list(label_map.keys()))
+        print("=" * 60)
+        print(f"Dataset rows: {len(df):,}")
+        print(f"Unique plant classes: {num_classes}")
+        print("Classes:")
+        print(sorted(label_map.keys()))
+        print("=" * 60)
 
         # persist label map
         (paths.metadata_dir / "label_map_plants_used.json").write_text(json.dumps(label_map, indent=2))
@@ -36,6 +41,7 @@ class PlantIdentifierTrainer:
         class_weights = dataset_module.compute_weights(df, label_map)
 
         model, base = model_module.build_model(num_classes)
+        print("Model output shape:", model.output_shape)
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=training_config.LEARNING_RATE_FROZEN),
             loss="sparse_categorical_crossentropy",
