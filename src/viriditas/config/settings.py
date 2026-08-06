@@ -8,6 +8,30 @@ from viriditas.config.environment import Environment, detect_environment
 
 
 @dataclass
+class ModelVersionConfig:
+    """Centralized model versioning configuration.
+
+    This is the single source of truth for model versioning. Change MODEL_VERSION
+    once and all model paths update automatically:
+    - BEST_MODEL_FILENAME: Official model name (e.g., viriditas_best_v02.keras)
+    - TRAINING_HISTORY_FILENAME: Versioned training history (e.g., viriditas_training_history_v02.json)
+
+    The best validation checkpoint is the canonical model. No separate "final model" is saved.
+    """
+    MODEL_VERSION: str = "v02"
+
+    @property
+    def BEST_MODEL_FILENAME(self) -> str:
+        """Official model filename (saved during training, loaded for inference)."""
+        return f"viriditas_best_{self.MODEL_VERSION}.keras"
+
+    @property
+    def TRAINING_HISTORY_FILENAME(self) -> str:
+        """Versioned training history filename."""
+        return f"viriditas_training_history_{self.MODEL_VERSION}.json"
+
+
+@dataclass
 class PathConfig:
     """Path configuration resolved based on environment.
 
@@ -17,6 +41,7 @@ class PathConfig:
     """
 
     environment: Environment = field(default_factory=detect_environment)
+    model_version: ModelVersionConfig = field(default_factory=ModelVersionConfig)
 
     @property
     def base_data_dir(self) -> Path:
@@ -143,29 +168,31 @@ class PathConfig:
         return self.base_models_dir
 
     def resolve_best_model_path(self) -> Path:
-        """Resolve the path to the canonical best_plant_model.keras.
+        """Resolve the path to the canonical model (versioned best checkpoint).
 
-        On Kaggle, recursively searches /kaggle/input/models for best_plant_model.keras.
-        On local development, returns models/best_plant_model.keras.
+        Uses the centralized MODEL_VERSION from ModelVersionConfig to determine the official
+        model filename. Supports:
+        - Kaggle model artifacts: recursively searches /kaggle/input/models
+        - Kaggle working directory: checks models/ subdirectory
+        - Local development: returns models/viriditas_best_vXX.keras
+
+        The best validation checkpoint is the canonical model. There is no separate "final model".
 
         Returns:
-            Path to best_plant_model.keras
+            Path to viriditas_best_vXX.keras
 
         Raises:
             FileNotFoundError: If the model cannot be found.
         """
-        model_filename = "best_plant_model.keras"
+        model_filename = self.model_version.BEST_MODEL_FILENAME
 
         # Try Kaggle artifact first if on Kaggle
         if self.environment == Environment.KAGGLE:
             model_input_root = Path("/kaggle/input/models")
             if model_input_root.exists():
-                # Recursively search for best_plant_model.keras
+                # Recursively search for the versioned model
                 matches = list(model_input_root.rglob(model_filename))
                 if matches:
-                    if len(matches) == 1:
-                        return matches[0]
-                    # Multiple matches — return the first one found (should not happen)
                     return matches[0]
 
         # Fallback: local models directory
@@ -229,6 +256,7 @@ class DatasetConfig:
 
 
 # Global singleton instances
+model_version_config = ModelVersionConfig()
 paths = PathConfig()
 image_config = ImageConfig()
 training_config = TrainingConfig()

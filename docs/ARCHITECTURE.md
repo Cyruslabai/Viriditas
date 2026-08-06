@@ -8,6 +8,7 @@ Components
 ----------
 - config
   - Centralized, environment-aware configuration (paths, image sizes, training hyperparameters).
+  - Separates writable output directories from read-only Kaggle artifact inputs.
   - Use `from viriditas.config import paths, image_config, training_config`.
 
 - preprocessing
@@ -15,13 +16,13 @@ Components
   - Ensures training and inference use identical preprocessing (EfficientNetV2 preprocess_input).
 
 - training
-  - dataset.py: metadata loading, label map creation, tf.data pipeline construction, class-weight computation.
+  - dataset.py: metadata loading, optional artifact metadata resolution, label map creation, tf.data pipeline construction, class-weight computation.
   - model.py: EfficientNetV2B0 base, augmentation, head and compilation settings.
   - callbacks.py: factories for ModelCheckpoint and EarlyStopping.
-  - trainer.py: PlantIdentifierTrainer orchestrates end-to-end training (frozen phase, fine-tune phase), saving models and histories.
+  - trainer.py: PlantIdentifierTrainer orchestrates end-to-end training (frozen phase, fine-tune phase), loads the saved plant label map, and saves models and histories.
 
 - inference
-  - loader.py: cached model and label-map loading (paths.resolve_model_path and paths.metadata_dir).
+  - loader.py: lazy cached model and label-map loading through `paths.resolve_best_model_path()` and artifact-aware metadata resolution.
   - preprocessing.py: adapter that reuses ImagePreprocessor for inference.
   - predictor.py: PlantPredictor with predict and predict_batch methods returning decoded results.
   - postprocessing.py: decoding logits/probabilities to human-readable labels and confidences.
@@ -34,10 +35,10 @@ Components
 
 Dataflow
 --------
-1. Metadata (data/metadata/plant_id_dataset.csv) is read by training.dataset.load_metadata.
+1. Metadata (`plant_id_dataset.csv`) is read by `training.dataset.load_metadata`; on Kaggle, the trainer requests attached artifact metadata when available.
 2. dataset.make_dataset() builds tf.data pipelines using ImagePreprocessor.
-3. trainer builds model via model.build_model, compiles and trains using datasets, saves best model and final model.
-4. inference.loader loads trained model and label map; predictor preprocesses inputs and returns decoded predictions.
+3. trainer loads `label_map_plants.json`, builds model via model.build_model, compiles and trains using datasets, saves best model and final model.
+4. inference.loader lazily loads the trained model and label map; predictor preprocesses inputs and returns decoded predictions.
 5. evaluator uses loader and dataset utilities to run inference on the test split and produce reports and plots.
 
 Design Principles

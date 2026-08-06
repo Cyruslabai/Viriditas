@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import tensorflow as tf
 
-from viriditas.config import paths, training_config
+from viriditas.config import paths, training_config, model_version_config
 from viriditas.training import dataset as dataset_module
 from viriditas.training import model as model_module
 from viriditas.training import callbacks as callbacks_module
@@ -84,8 +84,9 @@ class PlantIdentifierTrainer:
         test_loss, test_acc = model.evaluate(test_ds)
         print(f"Test loss: {test_loss:.4f}  Test accuracy: {test_acc:.4f}")
 
-        model.save(self.output_dir / "plant_id_model.keras")
-        print(f"Model saved to {self.output_dir / 'plant_id_model.keras'}")
+        # The official model is the best validation checkpoint saved by ModelCheckpoint.
+        # No separate "final model" is saved—the checkpoint IS the canonical model.
+        print(f"Official model saved as: {model_version_config.BEST_MODEL_FILENAME}")
 
         history = {
             "frozen": {k: [float(v) for v in vals] for k, vals in history1.history.items()},
@@ -93,4 +94,6 @@ class PlantIdentifierTrainer:
             "test_loss": float(test_loss),
             "test_accuracy": float(test_acc),
         }
-        (self.output_dir / "plant_id_training_history.json").write_text(json.dumps(history, indent=2))
+        history_path = self.output_dir / model_version_config.TRAINING_HISTORY_FILENAME
+        history_path.write_text(json.dumps(history, indent=2))
+        print(f"Training history saved to: {history_path}")

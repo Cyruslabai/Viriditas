@@ -1,6 +1,6 @@
 # VIRIDITAS Kaggle Runbook
 
-This runbook is the exact recovery path for running VIRIDITAS preprocessing inside Kaggle after closing the laptop, restarting a session, or losing `/kaggle/working`.
+This runbook is the exact recovery path for running VIRIDITAS preprocessing and artifact-backed training inside Kaggle after closing the laptop, restarting a session, or losing `/kaggle/working`.
 
 ## 1. Required Kaggle Setup
 
@@ -18,6 +18,14 @@ Value: your GitHub personal access token
 ```
 
 Do not paste the token directly into notebook cells.
+
+For training or inference reruns, also attach:
+
+```text
+viriditas-artifacts
+```
+
+This artifact dataset should contain the generated metadata files, including `plant_id_dataset.csv` and `label_map_plants.json`. Model inference also expects access to the versioned model (e.g., `viriditas_best_v02.keras`) through the configured Kaggle model artifact path or a local `models/` directory. The model filename is resolved automatically from the centralized MODEL_VERSION configuration.
 
 ## 2. Download Latest Repo From GitHub
 
@@ -154,13 +162,53 @@ Pea Plant Dataset 0
 Test Disease Severity Level 0
 ```
 
-## 6. If Kaggle Still Shows Old Labels
+## 6. Export Metadata As A Kaggle Artifact
+
+After validation, save the generated metadata directory as a Kaggle Dataset named `viriditas-artifacts` before starting a separate training session. The current configuration resolver supports common artifact layouts:
+
+```text
+viriditas-artifacts/
+  plant_id_dataset.csv
+  label_map_plants.json
+```
+
+or:
+
+```text
+viriditas-artifacts/
+  data/metadata/
+    plant_id_dataset.csv
+    label_map_plants.json
+```
+
+## 7. Run Plant Training From Attached Artifacts
+
+With `viriditas-artifacts` attached, run:
+
+```python
+%cd /kaggle/working/Viriditas
+%run notebooks/02_train_plant_model.py
+```
+
+Expected behavior:
+
+```text
+use_artifact: True
+Loading label map from: /kaggle/input/.../label_map_plants.json
+Dataset rows: ...
+Unique plant classes: ...
+Train: ...  Val: ...  Test: ...
+```
+
+The trainer reads metadata and `label_map_plants.json` from the read-only artifact dataset and writes model outputs to `/kaggle/working/models`.
+
+## 8. If Kaggle Still Shows Old Labels
 
 Run the download cell again, restart the Kaggle session, and rerun from step 3.
 
 The notebook runner clears cached `viriditas` modules, but a hard restart is still acceptable if Kaggle behaves strangely.
 
-## 7. What Is Safe To Lose
+## 9. What Is Safe To Lose
 
 Safe to lose:
 
@@ -175,4 +223,3 @@ Not safe to lose:
 - attached dataset list
 
 The repo is the durable source. If `/kaggle/working` resets, rerun this runbook.
-

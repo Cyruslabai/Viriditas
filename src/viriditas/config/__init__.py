@@ -18,10 +18,12 @@ Usage:
 
 from viriditas.config.environment import Environment, detect_environment
 from viriditas.config.settings import (
+    ModelVersionConfig,
     PathConfig,
     ImageConfig,
     TrainingConfig,
     DatasetConfig,
+    model_version_config,
     paths,
     image_config,
     training_config,
@@ -31,10 +33,12 @@ from viriditas.config.settings import (
 __all__ = [
     "Environment",
     "detect_environment",
+    "ModelVersionConfig",
     "PathConfig",
     "ImageConfig",
     "TrainingConfig",
     "DatasetConfig",
+    "model_version_config",
     "paths",
     "image_config",
     "training_config",

@@ -2,6 +2,26 @@
 
 # VIRIDITAS Project Journal
 
+## 2026-08-06
+
+### Artifact-Backed Training And Inference Alignment
+
+Updated the project records after the latest training/configuration changes.
+The plant trainer now asks `load_metadata(use_artifact=True)` for
+`plant_id_dataset.csv` so Kaggle training can consume an attached
+`viriditas-artifacts` dataset instead of depending on regenerated files in
+`/kaggle/working`.
+
+The trainer also loads `label_map_plants.json` through the shared inference
+loader before building the model. This keeps the model output dimension and
+class indices aligned with the generated metadata artifact, rather than
+recomputing a label map from whichever dataframe happens to be loaded.
+
+Path configuration now distinguishes writable working outputs from read-only
+artifact inputs, and inference resources are lazily cached on first use. The
+legacy `src/agriai/` blocker is no longer present in the active source tree;
+`src/viriditas/` is the sole active namespace.
+
 ## 2026-08-01 22:34:21 — Phase 9: Final Cleanup (completed)
 
 Summary:
@@ -109,37 +129,29 @@ preprocessing were centralized before extracting the training, inference, and
 evaluation packages — those later extractions depend on having one shared
 configuration and preprocessing layer to build on top of.
 
-### Lazy Model Loading (Planned)
+### Lazy Model Loading
 
-Documented as an architectural decision, not yet implemented: inference
-modules should avoid loading TensorFlow models during module import, and
-should instead lazily initialize models on first use. Rationale: faster
-startup, easier testing, and better integration with FastAPI's request
-lifecycle (which does not want a heavy model load blocking application
-startup or every cold import). Tracked in `TODO.md` under Inference.
+Originally documented as an architectural decision on 2026-08-01, then
+implemented by 2026-08-06: inference modules avoid loading TensorFlow models
+during module import and lazily initialize resources on first use. Rationale:
+faster startup, easier testing, and better integration with FastAPI's request
+lifecycle.
 
-### Current Resume Point
+### Resume Point Superseded On 2026-08-06
 
 Immediate priorities, in order:
 
-1. Reconcile or remove the legacy `src/agriai/` package, which was
-   unintentionally reintroduced as a tracked package around 2026-07-19 despite
-   `src/viriditas/` being the sole active namespace since the 2026-07-04
-   rename.
-2. Fix known issues in `notebooks/03_model_analysis.py` (local metadata
+1. Fix known issues in `notebooks/03_model_analysis.py` (local metadata
    fallback path, undefined misclassified-sample count constant, dataset
    accuracy plot axis using percentage values against a 0-1 x-axis limit)
    before treating its output as reliable.
-3. Decide handling for the 7 remaining unlabeled apple images.
-4. Continue extracting `src/viriditas/training/`, `src/viriditas/inference/`
-   (with lazy loading), and `src/viriditas/evaluation/` out of the current
-   notebook scripts.
+2. Decide handling for the 7 remaining unlabeled apple images.
+3. Run plant model analysis and record verified baseline metrics.
+4. Create the disease-classification training workflow.
+5. Begin FastAPI backend design around the plant inference package.
 
-### Current Risks
+### Remaining Risks
 
-- The legacy `src/agriai/` package being tracked again is a real risk of
-  future confusion about which namespace is authoritative; must be resolved
-  before it causes an accidental import of stale code.
 - `03_model_analysis.py` has three known defects and should not yet be trusted
   for reported metrics until fixed.
 - No unit tests yet cover the filename-based label fallback, non-informative

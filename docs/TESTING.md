@@ -8,7 +8,7 @@ Run tests
 Test fixtures
 -------------
 - `tests/conftest.py` provides fixtures for:
-  - sample_image (a small generated image in `data/images/img1.jpg`)
+  - sample_image (a small generated image in `tests/fixtures/img1.jpg`)
   - metadata_csv (the minimal `data/metadata/plant_id_dataset.csv`)
   - models_dir (paths.models_dir)
 

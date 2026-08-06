@@ -15,6 +15,7 @@ Adding datasets
    - Notebook: `notebooks/01_dataset_index_builder.ipynb`
    - CLI: `python scripts/build_dataset_index.py --dataset-root <path> --output-dir data/metadata`
 3. Verify `data/metadata/plant_id_dataset.csv` contains correct `image_path`, `task_plant_label`, and `split` columns.
+4. For Kaggle training reruns, export the generated metadata as a `viriditas-artifacts` dataset and attach it to the notebook.
 
 Training
 --------
@@ -23,8 +24,19 @@ Training
   trainer = PlantIdentifierTrainer()
   trainer.run()
 
-- Hyperparameters and paths are centralized in `viriditas.config` (training_config, image_config, paths).
-- Outputs: best model (`best_plant_model.keras`), final model (`plant_id_model.keras`), and `plant_id_training_history.json`.
+- Hyperparameters and paths are centralized in `viriditas.config` (training_config, image_config, paths, model_version_config).
+- `PlantIdentifierTrainer.run()` requests artifact-backed metadata on Kaggle and loads `label_map_plants.json` through the inference loader so class indices match the generated metadata.
+- The best validation checkpoint is automatically saved as the official model using the versioned filename:
+  - Example: `viriditas_best_v02.keras` (when MODEL_VERSION = "v02")
+  - NO separate "final model" is saved—the checkpoint IS the canonical model.
+- Training history is saved with a matching versioned filename:
+  - Example: `viriditas_training_history_v02.json`
+
+**To switch model versions:** Edit `src/viriditas/config/settings.py` and change:
+```python
+MODEL_VERSION = "v03"
+```
+All training, evaluation, and inference paths update automatically.
 
 Inference
 ---------
@@ -34,6 +46,7 @@ Inference
   p.predict(path)
 
 - loader.get_model()/get_label_map() can be used to access underlying resources if needed.
+- Model and label-map resources are loaded lazily and cached on first use.
 
 Evaluation
 ----------

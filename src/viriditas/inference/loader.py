@@ -6,23 +6,26 @@ from typing import Dict, Any
 
 import tensorflow as tf
 
-from viriditas.config import paths
+from viriditas.config import paths, model_version_config
 
 _MODEL: tf.keras.Model | None = None
 _LABEL_MAP: dict[str, int] | None = None
 
 
 def get_model() -> tf.keras.Model:
-    """Lazily load and cache the canonical best_plant_model.keras.
+    """Lazily load and cache the canonical official model.
 
-    On Kaggle, automatically locates the model in the attached artifact.
-    On local development, uses models/best_plant_model.keras.
+    Uses the centralized MODEL_VERSION to locate and load viriditas_best_vXX.keras.
+    The best validation checkpoint is the canonical model (no separate "final model").
+
+    On Kaggle, automatically locates the model in attached artifacts.
+    On local development, uses models/viriditas_best_vXX.keras.
 
     Returns:
         Cached Keras model instance.
 
     Raises:
-        FileNotFoundError: If best_plant_model.keras cannot be found.
+        FileNotFoundError: If the official model cannot be found.
     """
     global _MODEL
     if _MODEL is not None:
