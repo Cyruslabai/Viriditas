@@ -8,6 +8,7 @@ from viriditas.config import paths, training_config
 from viriditas.training import dataset as dataset_module
 from viriditas.training import model as model_module
 from viriditas.training import callbacks as callbacks_module
+from viriditas.inference.loader import get_label_map
 
 
 class PlantIdentifierTrainer:
@@ -21,7 +22,9 @@ class PlantIdentifierTrainer:
         print("GPUs available:", tf.config.list_physical_devices("GPU"))
 
         df = dataset_module.load_metadata(use_artifact=True)
-        label_map = dataset_module.build_label_map(df)
+
+        # Load the label map from the artifact dataset
+        label_map = get_label_map()
         num_classes = len(label_map)
         print("=" * 60)
         print(f"Dataset rows: {len(df):,}")
@@ -30,8 +33,6 @@ class PlantIdentifierTrainer:
         print(sorted(label_map.keys()))
         print("=" * 60)
 
-        # persist label map
-        (paths.metadata_dir / "label_map_plants_used.json").write_text(json.dumps(label_map, indent=2))
 
         train_ds, n_train = dataset_module.make_dataset(df, label_map, "train", shuffle=True)
         val_ds, n_val = dataset_module.make_dataset(df, label_map, "val", shuffle=False)
