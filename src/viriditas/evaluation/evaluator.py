@@ -63,34 +63,53 @@ class Evaluator:
         model = loader.get_model()
 
         print("Running inference...")
-        # Build dataset
         test_ds, n = self.build_test_dataset(test_df, label_map)
         probs = model.predict(test_ds, verbose=1)
 
-        # Save results
-        analysis_df = reports.save_prediction_results(test_df, probs, class_names, output_dir=self.output_dir)
+        print("✓ Inference complete")
 
-        # Metrics
+        print("Saving prediction results...")
+        analysis_df = reports.save_prediction_results(
+            test_df,
+            probs,
+            class_names,
+            output_dir=self.output_dir,
+        )
+        print("✓ Prediction results saved")
+
+        print("Computing metrics...")
         y_true = analysis_df["true_index"].to_numpy()
         y_pred = analysis_df["predicted_index"].to_numpy()
 
         report = metrics.classification_report_dict(y_true, y_pred, class_names)
         prf = metrics.precision_recall_f1(y_true, y_pred)
         per_class_acc = metrics.per_class_accuracy(y_true, y_pred)
+        print("✓ Metrics computed")
 
-        # Confusion
+        print("Generating confusion matrix...")
         cm = visualization.compute_confusion(y_true, y_pred)
-        visualization.plot_confusion_matrix(cm, class_names, output_path=self.output_dir / "confusion_matrix.png")
+        visualization.plot_confusion_matrix(
+            cm,
+            class_names,
+            output_path=self.output_dir / "confusion_matrix.png",
+        )
+        print("✓ Confusion matrix saved")
 
-        # Visualizations
-        visualization.plot_topk_distribution(probs, k=3, output_path=self.output_dir / "topk_distribution.png")
+        print("Generating Top-K visualization...")
+        visualization.plot_topk_distribution(
+            probs,
+            k=3,
+            output_path=self.output_dir / "topk_distribution.png",
+        )
+        print("✓ Top-K visualization saved")
 
-        # Persist summaries
+        print("Saving evaluation summary...")
         summary = {
             "classification_report": report,
             "precision_recall_f1": prf,
             "per_class_accuracy": per_class_acc,
         }
         (self.output_dir / "evaluation_summary.json").write_text(json.dumps(summary, indent=2))
+        print("✓ Evaluation complete!")
 
         return analysis_df
