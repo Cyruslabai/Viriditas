@@ -25,6 +25,7 @@ class Evaluator:
         t = time.time()
         print("Reading metadata...")
         df = dataset_module.load_metadata(use_artifact=True)
+        df = df[df["split"] == "test"].copy()
         print(f"Metadata loaded in {time.time() - t:.2f}s")
         print(f"Rows: {len(df)}")
 
